@@ -1,6 +1,54 @@
 {
   "channels": [
     {
+      "name": "Globo SP (teste)",
+      "url": "https://cdn-5.nxplay.com.br/GLOBO_SP_TK/index.m3u8"
+    },
+    {
+      "name": "TV TEM Sorocaba (teste)",
+      "url": "https://wbeo5ubp2y.singularcdn.net.br:443/TV_TEM_HD_PFZ/tracks-v1a1/mono.m3u8"
+    },
+    {
+      "name": "SBT TVS+ Sorocaba (teste)",
+      "url": "https://wbeo5ubp2y.singularcdn.net.br:443/TV_SOROCABA_HD_PFZ/tracks-v1a1/mono.m3u8"
+    },
+    {
+      "name": "Record SP (teste)",
+      "url": "https://playplusspo-lh.akamaihd.net/i/pp_sp@350176/index_720_av-p.m3u8"
+    },
+    {
+      "name": "SBT Interior",
+      "url": "https://cdn.jmvstream.com/w/LVW-10801/LVW10801_Xvg4R0u57n/playlist.m3u8"
+    },
+    {
+      "name": "Band",
+      "url": "https://media.cdntvms.com.br/band_sat/index.m3u8"
+    },
+    {
+      "name": "RedeTV!",
+      "url": "https://hls.brasilstream.com.br/live/redetv/redetv/playlist.m3u8"
+    },
+    {
+      "name": "TV Cultura",
+      "url": "https://player-tvcultura.stream.uol.com.br/live/tvcultura.m3u8"
+    },
+    {
+      "name": "TV Gazeta",
+      "url": "https://tv.nuvemplay.live/hls/40gtv/stream.m3u8"
+    },
+    {
+      "name": "Record News",
+      "url": "https://rnw-rn.otteravision.com/rnw/rn/rnw_rn.m3u8"
+    },
+    {
+      "name": "SBT News",
+      "url": "https://dai.google.com/linear/hls/event/1XSOdtQ0SH2G8OEmEfGgjQ/master.m3u8"
+    },
+    {
+      "name": "Rede Brasil",
+      "url": "https://redebrasil.nuvemplay.live/hls/stream.m3u8"
+    },
+    {
       "name": "TV Câmara",
       "url": "https://stream3.camara.gov.br/tv1/manifest.m3u8"
     },
@@ -15,10 +63,6 @@
     {
       "name": "Canal Gov",
       "url": "https://canalgov-stream.ebc.com.br/index.m3u8"
-    },
-    {
-      "name": "TV Cultura",
-      "url": "https://player-tvcultura.stream.uol.com.br/live/tvcultura.m3u8"
     },
     {
       "name": "Canal Libras",
@@ -45,40 +89,12 @@
       "url": "https://sbt.cdnsimba.com.br/bpk-tv/SBTrj/default/index.m3u8"
     },
     {
-      "name": "SBT Interior",
-      "url": "https://cdn.jmvstream.com/w/LVW-10801/LVW10801_Xvg4R0u57n/playlist.m3u8"
-    },
-    {
-      "name": "RedeTV!",
-      "url": "https://hls.brasilstream.com.br/live/redetv/redetv/playlist.m3u8"
-    },
-    {
-      "name": "Record News",
-      "url": "https://rnw-rn.otteravision.com/rnw/rn/rnw_rn.m3u8"
-    },
-    {
-      "name": "TV Gazeta",
-      "url": "https://tv.nuvemplay.live/hls/40gtv/stream.m3u8"
-    },
-    {
-      "name": "SBT News",
-      "url": "https://dai.google.com/linear/hls/event/1XSOdtQ0SH2G8OEmEfGgjQ/master.m3u8"
-    },
-    {
       "name": "Globo - TV Morena",
       "url": "https://media2.cdntvms.com.br/tv_morena_dorados/index.m3u8"
     },
     {
-      "name": "Band",
-      "url": "https://media.cdntvms.com.br/band_sat/index.m3u8"
-    },
-    {
       "name": "Record",
       "url": "https://cdn.jmvstream.com/w/LVW-10842/LVW10842_513N26MDBL/chunklist.m3u8"
-    },
-    {
-      "name": "Rede Brasil",
-      "url": "https://redebrasil.nuvemplay.live/hls/stream.m3u8"
     },
     {
       "name": "Rede Gospel",
@@ -95,6 +111,42 @@
     {
       "name": "TVE RS",
       "url": "https://streaming.procergs.com.br:8443/tve/stve/playlist.m3u8"
+    },
+    {
+      "name": "Grjngo - Faroeste (teste)",
+      "url": "https://d185afac7321401888ff3bb2fae7ccfc.mediatailor.us-east-1.amazonaws.com/v1/master/04fd913bb278d8775298c26fdca9d9841f37601f/TCL-br_GrjngoFilmesDeFaroeste/playlist.m3u8"
+    },
+    {
+      "name": "Runtime TV e Filmes",
+      "url": "https://stream.ads.ottera.tv/playlist.m3u8?network_id=2153"
+    },
+    {
+      "name": "Runtime Ação",
+      "url": "https://stream.ads.ottera.tv/playlist.m3u8?network_id=2552"
+    },
+    {
+      "name": "Runtime Comédia",
+      "url": "https://stream.ads.ottera.tv/playlist.m3u8?network_id=2553"
+    },
+    {
+      "name": "Runtime Família",
+      "url": "https://stream.ads.ottera.tv/playlist.m3u8?network_id=5589"
+    },
+    {
+      "name": "Runtime Romance",
+      "url": "https://stream.ads.ottera.tv/playlist.m3u8?network_id=4866"
+    },
+    {
+      "name": "Retro Cartoon (teste)",
+      "url": "https://stmv1.video.brstream.com.br/retrotv/retrotv/chunklist_w1069200121.m3u8"
+    },
+    {
+      "name": "Series Classic (teste)",
+      "url": "https://cdn-tiva-video10-logicahost-com-br.smartbit.co/serieclassic/serieclassic/playlist.m3u8"
+    },
+    {
+      "name": "Toon Goggles Brasil (teste)",
+      "url": "https://stream-us-east-1.getpublica.com/playlist.m3u8?network_id=5442"
     }
   ]
 }
