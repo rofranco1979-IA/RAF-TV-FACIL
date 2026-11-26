@@ -141,6 +141,41 @@
       "name": "RedeTV! Paraná",
       "url": "https://tv01.zas.media:1936/redetvparana/redetvparana/playlist.m3u8",
       "category": "TV aberta"
+    },
+    {
+      "name": "Canal 25 Jundiaí",
+      "url": "https://stream01.msolutionbrasil.com.br/hls/canal25/live.m3u8",
+      "category": "TV aberta"
+    },
+    {
+      "name": "AWTV",
+      "url": "https://awtv.nuvemplay.live/hls/stream.m3u8",
+      "category": "Filmes e faroeste"
+    },
+    {
+      "name": "Cultura Fast",
+      "url": "https://fpa-gateway.tvcultura.com.br:8181/memfs/606caef0-a290-413d-9f1f-8fcdb3a73831.m3u8",
+      "category": "Públicos e educativos"
+    },
+    {
+      "name": "TV UFOP",
+      "url": "https://app.tvufop.com.br/hls/tvufop.m3u8",
+      "category": "Públicos e educativos"
+    },
+    {
+      "name": "TV Brasil Internacional",
+      "url": "https://tvbrasilinternacional-stream.ebc.com.br/index.m3u8",
+      "category": "TV aberta"
+    },
+    {
+      "name": "Canal UOL",
+      "url": "https://video24.mais.uol.com.br/live/6146.m3u8",
+      "category": "Notícias"
+    },
+    {
+      "name": "Amazon Sat",
+      "url": "https://amazonsat.brasilstream.com.br/hls/amazonsat/index.m3u8",
+      "category": "TV aberta"
     }
   ]
 }
