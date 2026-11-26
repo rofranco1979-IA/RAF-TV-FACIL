@@ -57,16 +57,8 @@
       "url": "https://tvbrasil-stream.ebc.com.br/index.m3u8"
     },
     {
-      "name": "TV Senado",
-      "url": "https://stream3.camara.gov.br/tvsenado/manifest.m3u8"
-    },
-    {
       "name": "Canal Gov",
       "url": "https://canalgov-stream.ebc.com.br/index.m3u8"
-    },
-    {
-      "name": "Canal Libras",
-      "url": "https://canallibras-stream.ebc.com.br/mux_video_ts/index-1.m3u8"
     },
     {
       "name": "TV Câmara 2",
@@ -75,10 +67,6 @@
     {
       "name": "Canal Educação",
       "url": "https://canaleducacao-stream.ebc.com.br/index.m3u8"
-    },
-    {
-      "name": "Canal Saúde",
-      "url": "https://arkyvbre1g.zoeweb.tv/fiocruz/fiocruz.stream/playlist.m3u8"
     },
     {
       "name": "Rede Minas",
@@ -99,10 +87,6 @@
     {
       "name": "Rede Gospel",
       "url": "https://redegospel-aovivo.nuvemplay.live/hls/stream.m3u8"
-    },
-    {
-      "name": "TV Evangelizar",
-      "url": "https://5f593df7851db.streamlock.net/evangelizar/tv/playlist.m3u8"
     },
     {
       "name": "TV Pai Eterno",
