@@ -63,6 +63,38 @@
     {
       "name": "SBT News",
       "url": "https://dai.google.com/linear/hls/event/1XSOdtQ0SH2G8OEmEfGgjQ/master.m3u8"
+    },
+    {
+      "name": "Globo - TV Morena",
+      "url": "https://media2.cdntvms.com.br/tv_morena_dorados/index.m3u8"
+    },
+    {
+      "name": "Band",
+      "url": "https://media.cdntvms.com.br/band_sat/index.m3u8"
+    },
+    {
+      "name": "Record",
+      "url": "https://cdn.jmvstream.com/w/LVW-10842/LVW10842_513N26MDBL/chunklist.m3u8"
+    },
+    {
+      "name": "Rede Brasil",
+      "url": "https://redebrasil.nuvemplay.live/hls/stream.m3u8"
+    },
+    {
+      "name": "Rede Gospel",
+      "url": "https://redegospel-aovivo.nuvemplay.live/hls/stream.m3u8"
+    },
+    {
+      "name": "TV Evangelizar",
+      "url": "https://5f593df7851db.streamlock.net/evangelizar/tv/playlist.m3u8"
+    },
+    {
+      "name": "TV Pai Eterno",
+      "url": "https://video09.logicahost.com.br/paieterno/paieterno/playlist.m3u8"
+    },
+    {
+      "name": "TVE RS",
+      "url": "https://streaming.procergs.com.br:8443/tve/stve/playlist.m3u8"
     }
   ]
 }
