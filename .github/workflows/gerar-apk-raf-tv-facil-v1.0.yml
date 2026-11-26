@@ -1,11 +1,11 @@
-name: RAF TV FACIL V1.0 - Gerar APK
+name: RAF TV FACIL V1.0.1 - Gerar APK
 'on':
   workflow_dispatch: {}
 permissions:
   contents: read
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
     - uses: actions/checkout@v4
@@ -13,7 +13,6 @@ jobs:
       with:
         distribution: temurin
         java-version: '17'
-    - uses: android-actions/setup-android@v3
     - uses: gradle/actions/setup-gradle@v4
       with:
         gradle-version: '8.9'
@@ -45,7 +44,7 @@ jobs:
         android {
          namespace 'br.com.raf.tvfacil'
          compileSdk 35
-         defaultConfig { applicationId 'br.com.raf.tvfacil'; minSdk 23; targetSdk 34; versionCode 1; versionName '1.0' }
+         defaultConfig { applicationId 'br.com.raf.tvfacil'; minSdk 23; targetSdk 34; versionCode 2; versionName '1.0.1' }
          compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
         }
         dependencies {
@@ -213,13 +212,25 @@ jobs:
     - name: Instalar SDK e compilar
       shell: bash
       run: |
-        sdkmanager "platforms;android-35" "build-tools;35.0.0"
+        set -eu
+        SDK_ROOT="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
+        SDKMANAGER="$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
+        if [ ! -x "$SDKMANAGER" ]; then
+          SDKMANAGER="$(find "$SDK_ROOT/cmdline-tools" -type f -path '*/bin/sdkmanager' | sort -V | tail -n 1)"
+        fi
+        test -x "$SDKMANAGER"
+        export ANDROID_HOME="$SDK_ROOT" ANDROID_SDK_ROOT="$SDK_ROOT"
+        # GitHub runner normally has accepted licenses; accept any remaining SDK licenses.
+        set +o pipefail
+        yes | "$SDKMANAGER" --sdk_root="$SDK_ROOT" --licenses >/dev/null
+        set -o pipefail
+        "$SDKMANAGER" --sdk_root="$SDK_ROOT" "platforms;android-35" "build-tools;35.0.0" "platform-tools"
         cd raf-tv-facil
         gradle --no-daemon :app:assembleDebug
         mkdir -p ../dist
-        cp app/build/outputs/apk/debug/app-debug.apk ../dist/RAF-TV-FACIL-V1.0-Android-TV.apk
+        cp app/build/outputs/apk/debug/app-debug.apk ../dist/RAF-TV-FACIL-V1.0.1-Android-TV.apk
     - uses: actions/upload-artifact@v4
       with:
-        name: RAF-TV-FACIL-V1.0-Android-TV
-        path: dist/RAF-TV-FACIL-V1.0-Android-TV.apk
+        name: RAF-TV-FACIL-V1.0.1-Android-TV
+        path: dist/RAF-TV-FACIL-V1.0.1-Android-TV.apk
         if-no-files-found: error
