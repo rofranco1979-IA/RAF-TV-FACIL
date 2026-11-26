@@ -1,0 +1,32 @@
+{
+  "channels": [
+    {
+      "name": "TV Câmara",
+      "url": "https://stream3.camara.gov.br/tv1/manifest.m3u8"
+    },
+    {
+      "name": "TV Brasil",
+      "url": "https://tvbrasil-stream.ebc.com.br/index.m3u8"
+    },
+    {
+      "name": "TV Senado",
+      "url": "https://stream3.camara.gov.br/tvsenado/manifest.m3u8"
+    },
+    {
+      "name": "Canal Gov",
+      "url": "https://canalgov-stream.ebc.com.br/index.m3u8"
+    },
+    {
+      "name": "TV Cultura",
+      "url": "https://player-tvcultura.stream.uol.com.br/live/tvcultura.m3u8"
+    },
+    {
+      "name": "Canal Libras",
+      "url": "https://canallibras-stream.ebc.com.br/mux_video_ts/index-1.m3u8"
+    },
+    {
+      "name": "TV Câmara 2",
+      "url": "https://stream3.camara.gov.br/tv2/manifest.m3u8"
+    }
+  ]
+}
