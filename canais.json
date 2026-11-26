@@ -2,87 +2,108 @@
   "channels": [
     {
       "name": "SBT Interior",
-      "url": "https://cdn.jmvstream.com/w/LVW-10801/LVW10801_Xvg4R0u57n/playlist.m3u8"
+      "url": "https://cdn.jmvstream.com/w/LVW-10801/LVW10801_Xvg4R0u57n/playlist.m3u8",
+      "category": "TV aberta"
     },
     {
       "name": "TV Cultura",
-      "url": "https://player-tvcultura.stream.uol.com.br/live/tvcultura.m3u8"
+      "url": "https://player-tvcultura.stream.uol.com.br/live/tvcultura.m3u8",
+      "category": "TV aberta"
     },
     {
       "name": "Record News",
-      "url": "https://rnw-rn.otteravision.com/rnw/rn/rnw_rn.m3u8"
+      "url": "https://rnw-rn.otteravision.com/rnw/rn/rnw_rn.m3u8",
+      "category": "Notícias"
     },
     {
       "name": "SBT News",
-      "url": "https://dai.google.com/linear/hls/event/1XSOdtQ0SH2G8OEmEfGgjQ/master.m3u8"
+      "url": "https://dai.google.com/linear/hls/event/1XSOdtQ0SH2G8OEmEfGgjQ/master.m3u8",
+      "category": "Notícias"
     },
     {
-      "name": "Rede Brasil",
-      "url": "https://redebrasil.nuvemplay.live/hls/stream.m3u8"
+      "name": "Rede Brasil de Televisão",
+      "url": "https://redebrasil.nuvemplay.live/hls/stream.m3u8",
+      "category": "TV aberta"
     },
     {
       "name": "TV Câmara",
-      "url": "https://stream3.camara.gov.br/tv1/manifest.m3u8"
+      "url": "https://stream3.camara.gov.br/tv1/manifest.m3u8",
+      "category": "Públicos e educativos"
     },
     {
       "name": "TV Brasil",
-      "url": "https://tvbrasil-stream.ebc.com.br/index.m3u8"
+      "url": "https://tvbrasil-stream.ebc.com.br/index.m3u8",
+      "category": "Públicos e educativos"
     },
     {
       "name": "Canal Gov",
-      "url": "https://canalgov-stream.ebc.com.br/index.m3u8"
+      "url": "https://canalgov-stream.ebc.com.br/index.m3u8",
+      "category": "Públicos e educativos"
     },
     {
       "name": "Canal Educação",
-      "url": "https://canaleducacao-stream.ebc.com.br/index.m3u8"
+      "url": "https://canaleducacao-stream.ebc.com.br/index.m3u8",
+      "category": "Públicos e educativos"
     },
     {
       "name": "Rede Minas",
-      "url": "https://8hzcavccys.zoeweb.tv/redeminas/ngrp:redeminas_all/playlist.m3u8"
+      "url": "https://8hzcavccys.zoeweb.tv/redeminas/ngrp:redeminas_all/playlist.m3u8",
+      "category": "Públicos e educativos"
     },
     {
-      "name": "SBT RJ",
-      "url": "https://sbt.cdnsimba.com.br/bpk-tv/SBTrj/default/index.m3u8"
+      "name": "SBT Rio",
+      "url": "https://sbt.cdnsimba.com.br/bpk-tv/SBTrj/default/index.m3u8",
+      "category": "TV aberta"
     },
     {
       "name": "Record",
-      "url": "https://cdn.jmvstream.com/w/LVW-10842/LVW10842_513N26MDBL/chunklist.m3u8"
+      "url": "https://cdn.jmvstream.com/w/LVW-10842/LVW10842_513N26MDBL/chunklist.m3u8",
+      "category": "TV aberta"
     },
     {
       "name": "Rede Gospel",
-      "url": "https://redegospel-aovivo.nuvemplay.live/hls/stream.m3u8"
+      "url": "https://redegospel-aovivo.nuvemplay.live/hls/stream.m3u8",
+      "category": "Religiosos"
     },
     {
       "name": "TV Pai Eterno",
-      "url": "https://video09.logicahost.com.br/paieterno/paieterno/playlist.m3u8"
+      "url": "https://video09.logicahost.com.br/paieterno/paieterno/playlist.m3u8",
+      "category": "Religiosos"
     },
     {
       "name": "TVE RS",
-      "url": "https://streaming.procergs.com.br:8443/tve/stve/playlist.m3u8"
+      "url": "https://streaming.procergs.com.br:8443/tve/stve/playlist.m3u8",
+      "category": "Públicos e educativos"
     },
     {
       "name": "Runtime TV e Filmes",
-      "url": "https://stream.ads.ottera.tv/playlist.m3u8?network_id=2153"
+      "url": "https://stream.ads.ottera.tv/playlist.m3u8?network_id=2153",
+      "category": "Filmes e faroeste"
     },
     {
       "name": "Runtime Ação",
-      "url": "https://stream.ads.ottera.tv/playlist.m3u8?network_id=2552"
+      "url": "https://stream.ads.ottera.tv/playlist.m3u8?network_id=2552",
+      "category": "Filmes e faroeste"
     },
     {
       "name": "Runtime Comédia",
-      "url": "https://stream.ads.ottera.tv/playlist.m3u8?network_id=2553"
+      "url": "https://stream.ads.ottera.tv/playlist.m3u8?network_id=2553",
+      "category": "Filmes e faroeste"
     },
     {
       "name": "Runtime Família",
-      "url": "https://stream.ads.ottera.tv/playlist.m3u8?network_id=5589"
+      "url": "https://stream.ads.ottera.tv/playlist.m3u8?network_id=5589",
+      "category": "Filmes e faroeste"
     },
     {
       "name": "Runtime Romance",
-      "url": "https://stream.ads.ottera.tv/playlist.m3u8?network_id=4866"
+      "url": "https://stream.ads.ottera.tv/playlist.m3u8?network_id=4866",
+      "category": "Filmes e faroeste"
     },
     {
-      "name": "Toon Goggles Brasil (teste)",
-      "url": "https://stream-us-east-1.getpublica.com/playlist.m3u8?network_id=5442"
+      "name": "Toon Goggles Brasil",
+      "url": "https://stream-us-east-1.getpublica.com/playlist.m3u8?network_id=5442",
+      "category": "Desenhos"
     },
     {
       "name": "RedeTV! Mais",
@@ -105,7 +126,7 @@
       "category": "Filmes e faroeste"
     },
     {
-      "name": "Cultura Fast",
+      "name": "Cultura FAST",
       "url": "https://fpa-gateway.tvcultura.com.br:8181/memfs/606caef0-a290-413d-9f1f-8fcdb3a73831.m3u8",
       "category": "Públicos e educativos"
     },
@@ -130,9 +151,54 @@
       "category": "TV aberta"
     },
     {
-      "name": "TV Comunitária DF (teste)",
+      "name": "TV Comunitária DF",
       "url": "https://5b7f3c45ab7c2.streamlock.net/8008/8008/playlist.m3u8",
       "category": "Públicos e educativos"
+    },
+    {
+      "name": "CNN Brasil",
+      "url": "https://d25usgadhphvwi.cloudfront.net/hls/main.m3u8",
+      "category": "Notícias"
+    },
+    {
+      "name": "Times Brasil (CNBC)",
+      "url": "https://ssai2-ads.api.leiniao.com/global-adinsertion-api/hls/live/v2/21fdb6dd7491406bba86497a24390a25/playlist.m3u8",
+      "category": "Notícias"
+    },
+    {
+      "name": "J3News TV",
+      "url": "https://video01.brascast.com/d92ebb4f/d92ebb4f/playlist.m3u8",
+      "category": "Notícias"
+    },
+    {
+      "name": "Classique TV",
+      "url": "https://stmv1.srvif.com/classique/classique/playlist.m3u8",
+      "category": "Filmes e faroeste"
+    },
+    {
+      "name": "MyTime Movie Network",
+      "url": "https://appletree-mytime-samsungbrazil.amagi.tv/playlist.m3u8",
+      "category": "Filmes e faroeste"
+    },
+    {
+      "name": "CINDIE TV",
+      "url": "https://cc-hqw8u5r1nshjc.akamaized.net/scheduler/scheduleMaster/352.m3u8",
+      "category": "Filmes e faroeste"
+    },
+    {
+      "name": "Gospel Cartoon",
+      "url": "https://stmv1.srvif.com/gospelcartoon/gospelcartoon/playlist.m3u8",
+      "category": "Desenhos"
+    },
+    {
+      "name": "TV Aparecida",
+      "url": "https://cdn.jmvstream.com/w/LVW-9716/LVW9716_HbtQtezcaw/playlist.m3u8",
+      "category": "Religiosos"
+    },
+    {
+      "name": "TV Terceiro Anjo",
+      "url": "https://streamer1.streamhost.org/salive/GMI3anjoh/playlist.m3u8",
+      "category": "Religiosos"
     }
   ]
 }
