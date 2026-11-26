@@ -1,4 +1,4 @@
-name: RAF TV FACIL V1.0.1 - Gerar APK
+name: RAF TV FACIL V1.1 - Gerar APK
 'on':
   workflow_dispatch: {}
 permissions:
@@ -44,7 +44,7 @@ jobs:
         android {
          namespace 'br.com.raf.tvfacil'
          compileSdk 35
-         defaultConfig { applicationId 'br.com.raf.tvfacil'; minSdk 23; targetSdk 34; versionCode 2; versionName '1.0.1' }
+         defaultConfig { applicationId 'br.com.raf.tvfacil'; minSdk 23; targetSdk 34; versionCode 3; versionName '1.1' }
          compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
         }
         dependencies {
@@ -83,7 +83,7 @@ jobs:
         mkdir -p 'app/src/main/java/br/com/raf/tvfacil'
         cat > 'app/src/main/java/br/com/raf/tvfacil/MainActivity.java' <<'RAF_FILE_7'
         package br.com.raf.tvfacil;
-
+        
         import android.app.*;
         import android.os.*;
         import android.content.*;
@@ -92,19 +92,37 @@ jobs:
         import android.view.*;
         import android.widget.*;
         import android.provider.Settings;
+        import android.text.InputType;
+        import org.json.*;
+        import java.net.URL;
+        import javax.net.ssl.HttpsURLConnection;
+        import java.io.*;
+        import java.nio.charset.StandardCharsets;
+        import java.util.ArrayList;
+        import java.util.HashSet;
         import androidx.media3.common.*;
         import androidx.media3.exoplayer.ExoPlayer;
         import androidx.media3.ui.PlayerView;
-
+        
         public class MainActivity extends Activity {
-            // Lista inicial experimental: apenas endereços de emissoras públicas.
-            private final String[] names = {"TV Câmara", "TV Brasil", "TV Senado"};
-            private final String[] urls = {
+            // Grade experimental, sem retransmissão própria.
+            private String[] names = {"TV Câmara", "TV Brasil", "TV Senado", "Canal Gov", "TV Cultura", "Canal Libras", "TV Câmara 2"};
+            private String[] urls = {
                 "https://stream3.camara.gov.br/tv1/manifest.m3u8",
                 "https://tvbrasil-stream.ebc.com.br/index.m3u8",
-                "https://stream3.camara.gov.br/tvsenado/manifest.m3u8"
+                "https://stream3.camara.gov.br/tvsenado/manifest.m3u8",
+                "https://canalgov-stream.ebc.com.br/index.m3u8",
+                "https://player-tvcultura.stream.uol.com.br/live/tvcultura.m3u8",
+                "https://canallibras-stream.ebc.com.br/mux_video_ts/index-1.m3u8",
+                "https://stream3.camara.gov.br/tv2/manifest.m3u8"
             };
-            private int index = 0;
+            private static final String DEFAULT_LIST = "https://raw.githubusercontent.com/rofranco1979-IA/RAF-TV-FACIL/main/canais.json";
+            private static final int[] TILE_COLORS={0xFF294F78,0xFF276047,0xFF46517B,0xFF63512E,0xFF385D68,0xFF51446E};
+            private int index = 0, attempts = 0, refreshGeneration = 0;
+            private boolean active = false;
+            private final Runnable reconnect = () -> {
+                if (active && this.player != null) startPlayback();
+            };
             private FrameLayout root;
             private PlayerView video;
             private ExoPlayer player;
@@ -112,12 +130,15 @@ jobs:
             private LinearLayout panel;
             private final Handler handler = new Handler(Looper.getMainLooper());
             private final Runnable hideBanner = () -> { if (banner != null) banner.setVisibility(View.GONE); };
-            private final Runnable timeout = () -> { if (player != null && player.getPlaybackState() != Player.STATE_READY) showStatus("Canal demorando a carregar.\nUse as setas para trocar ou OK para tentar novamente."); };
+            private final Runnable timeout = () -> { if (player != null && player.getPlaybackState() != Player.STATE_READY) scheduleRetry(); };
             private int dp(float n) { return (int)(n * getResources().getDisplayMetrics().density + .5f); }
             @Override public void onCreate(Bundle b) {
                 super.onCreate(b);
                 getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+                try { applyList(getPreferences(MODE_PRIVATE).getString("cached_list", "")); } catch(Exception ignored) {}
+                String lastName = getPreferences(MODE_PRIVATE).getString("last_name", "");
                 index = Math.max(0, Math.min(names.length-1, getPreferences(MODE_PRIVATE).getInt("last", 0)));
+                for(int i=0;i<names.length;i++) if(names[i].equals(lastName)) index=i;
                 root = new FrameLayout(this); root.setBackgroundColor(Color.BLACK);
                 video = new PlayerView(this); video.setUseController(false); video.setFocusable(false);
                 video.setOnClickListener(v -> toggleMenu());
@@ -132,33 +153,40 @@ jobs:
             private TextView label(String text, int size) { TextView t = new TextView(this); t.setText(text); t.setTextSize(size); t.setTextColor(Color.WHITE); return t; }
             private void immersive() { getWindow().getDecorView().setSystemUiVisibility(5894 | View.SYSTEM_UI_FLAG_LAYOUT_STABLE); }
             @Override public void onWindowFocusChanged(boolean f) { super.onWindowFocusChanged(f); if(f) immersive(); }
-            @Override protected void onStart() { super.onStart(); if(player==null) {
+            @Override protected void onStart() { super.onStart(); active=true; if(player==null) {
                 player=new ExoPlayer.Builder(this).build(); video.setPlayer(player);
                 player.addListener(new Player.Listener(){
                     @Override public void onPlaybackStateChanged(int s) {
-                        if(s==Player.STATE_READY) { handler.removeCallbacks(timeout); status.setVisibility(View.GONE); }
-                        else if(s==Player.STATE_BUFFERING) showStatus("Carregando " + names[index] + "…");
-                        else if(s==Player.STATE_ENDED) showStatus("Transmissão encerrada.\nEscolha outro canal ou tente novamente.");
+                        if(s==Player.STATE_READY) { handler.removeCallbacks(timeout); handler.removeCallbacks(reconnect); attempts=0; status.setVisibility(View.GONE); }
+                        else if(s==Player.STATE_BUFFERING) { showStatus("Carregando " + names[index] + "…"); handler.removeCallbacks(timeout); handler.postDelayed(timeout,20000); }
+                        else if(s==Player.STATE_ENDED) scheduleRetry();
                     }
-                    @Override public void onPlayerError(PlaybackException e) { handler.removeCallbacks(timeout); showStatus("Canal indisponível.\nUse as setas ou OK para escolher outro."); }
+                    @Override public void onPlayerError(PlaybackException e) { scheduleRetry(); }
                 });
                 tune(index);
+                refreshList(false);
             }}
-            @Override protected void onStop() { handler.removeCallbacksAndMessages(null); if(player!=null){video.setPlayer(null);player.release();player=null;} super.onStop(); }
+            @Override protected void onStop() { active=false; handler.removeCallbacksAndMessages(null); if(player!=null){video.setPlayer(null);player.release();player=null;} refreshGeneration++; super.onStop(); }
             private void showStatus(String text){ status.setText(text);status.setVisibility(View.VISIBLE); }
             private void tune(int n){
-                index=(n+names.length)%names.length; getPreferences(MODE_PRIVATE).edit().putInt("last",index).apply();
+                attempts=0; handler.removeCallbacks(reconnect); handler.removeCallbacks(timeout);
+                index=(n+names.length)%names.length; getPreferences(MODE_PRIVATE).edit().putInt("last",index).putString("last_name",names[index]).apply();
                 banner.setText(String.format(java.util.Locale.ROOT,"%02d   %s     •     ↑ ↓ Trocar     •     OK Canais",index+1,names[index])); banner.setVisibility(View.VISIBLE);
                 handler.removeCallbacks(hideBanner);handler.postDelayed(hideBanner,4500);
-                if(player==null)return;
+                startPlayback();
+            }
+            private void startPlayback(){
+                if(player==null || !active)return;
+                handler.removeCallbacks(timeout); handler.removeCallbacks(reconnect);
                 showStatus("Carregando " + names[index] + "…");
                 player.setMediaItem(new MediaItem.Builder().setUri(urls[index]).setMimeType(MimeTypes.APPLICATION_M3U8).build());
-                player.prepare();player.play();handler.removeCallbacks(timeout);handler.postDelayed(timeout,15000);
+                player.prepare();player.play();handler.removeCallbacks(timeout);handler.postDelayed(timeout,20000);
             }
             private GradientDrawable bg(int color){GradientDrawable g=new GradientDrawable();g.setColor(color);g.setCornerRadius(dp(10));return g;}
-            private Button action(String name, Runnable run){
-                Button b=new Button(this);b.setText(name);b.setAllCaps(false);b.setTextSize(23);b.setTextColor(Color.WHITE);b.setMinHeight(dp(52));b.setFocusable(true);b.setFocusableInTouchMode(true);b.setId(View.generateViewId());b.setBackground(bg(0xFF26394F));
-                b.setOnFocusChangeListener((v,f)->{ b.setBackground(bg(f?0xFF245BC1:0xFF26394F)); });b.setOnClickListener(v->run.run());return b;
+            private Button action(String name, Runnable run){return action(name,0xFF26394F,run);}
+            private Button action(String name,int color,Runnable run){
+                Button b=new Button(this);b.setText(name);b.setAllCaps(false);b.setTextSize(23);b.setTextColor(Color.WHITE);b.setMinHeight(dp(52));b.setFocusable(true);b.setFocusableInTouchMode(true);b.setId(View.generateViewId());b.setBackground(bg(color));
+                b.setOnFocusChangeListener((v,f)->{ b.setBackground(bg(f?0xFF245BC1:color)); });b.setOnClickListener(v->run.run());return b;
             }
             private void closeMenu(){if(panel!=null){root.removeView(panel);panel=null;} immersive();}
             private void toggleMenu(){if(panel!=null)closeMenu();else openMenu();}
@@ -170,12 +198,88 @@ jobs:
                 ScrollView scroll=new ScrollView(this);scroll.setFillViewport(false);panel.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
                 LinearLayout list=new LinearLayout(this);list.setOrientation(LinearLayout.VERTICAL);scroll.addView(list);
                 Button selected=null;
-                for(int i=0;i<names.length;i++){ final int ch=i;Button b=action(String.format(java.util.Locale.ROOT,"%02d    %s",i+1,names[i]),()->{closeMenu();tune(ch);});addButton(list,b);if(i==index)selected=b; }
-                addButton(list,action("Voltar à TV",()->closeMenu()));
-                addButton(list,action("Configuração inicial (instalador)",()->setupHome()));
+                LinearLayout row=null;
+                for(int i=0;i<names.length;i++){
+                    if(i%2==0){row=new LinearLayout(this);row.setOrientation(LinearLayout.HORIZONTAL);list.addView(row,new LinearLayout.LayoutParams(-1,-2));}
+                    final int ch=i;
+                    Button btn=action(String.format(java.util.Locale.ROOT,"%02d   %s",i+1,names[i]),TILE_COLORS[i%TILE_COLORS.length],()->{closeMenu();tune(ch);});
+                    btn.setOnLongClickListener(v->{installer();return true;});btn.setTextSize(22);btn.setMinHeight(dp(72));btn.setMaxLines(2);
+                    LinearLayout.LayoutParams cell=new LinearLayout.LayoutParams(0,-2,1);cell.setMargins(dp(5),dp(5),dp(5),dp(5));row.addView(btn,cell);
+                    if(i==index)selected=btn;
+                }
+                Button back=action("Voltar à TV",()->closeMenu());addButton(list,back);
+                title.setOnLongClickListener(v->{installer();return true;});
+                title.setContentDescription("RAF TV FÁCIL. Escolha seu canal.");
                 if(selected!=null)selected.requestFocus();
             }
             private void addButton(LinearLayout container,Button b){LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.setMargins(0,dp(6),0,0);container.addView(b,lp);}
+            private void scheduleRetry(){
+                handler.removeCallbacks(timeout);handler.removeCallbacks(reconnect);
+                if(!active || player==null)return;
+                if(attempts>=3){showStatus("Canal indisponível.\nUse as setas para trocar ou OK para escolher.");return;}
+                int delay=3*(++attempts);
+                showStatus("Reconectando " + names[index] + "…\nAguarde ou troque de canal.");
+                handler.postDelayed(reconnect,delay*1000L);
+            }
+            private void installer(){
+                new AlertDialog.Builder(this).setTitle("Configuração do instalador")
+                    .setItems(new String[]{"Abrir TV ao ligar o aparelho","Atualizar canais agora","Endereço da lista de canais"},(d,w)->{
+                        if(w==0)setupHome();else if(w==1)refreshList(true);else editListUrl();
+                    }).setNegativeButton("Voltar",null).show();
+            }
+            private void editListUrl(){
+                EditText input=new EditText(this);input.setSingleLine(true);input.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_URI);
+                input.setText(getPreferences(MODE_PRIVATE).getString("list_url",DEFAULT_LIST));
+                new AlertDialog.Builder(this).setTitle("Lista HTTPS autorizada (JSON)").setView(input).setNegativeButton("Cancelar",null).setPositiveButton("Salvar",(d,w)->{
+                    String value=input.getText().toString().trim();
+                    if(!validHttps(value)){Toast.makeText(this,"Use um endereço HTTPS válido",Toast.LENGTH_LONG).show();return;}
+                    getPreferences(MODE_PRIVATE).edit().putString("list_url",value).apply();refreshList(true);
+                }).show();
+            }
+            private boolean validHttps(String u){try{URL parsed=new URL(u);return "https".equalsIgnoreCase(parsed.getProtocol()) && parsed.getHost()!=null&&!parsed.getHost().isEmpty()&&parsed.getUserInfo()==null;}catch(Exception e){return false;}}
+            private boolean applyList(String data) throws Exception{
+                JSONArray array=new JSONObject(data).getJSONArray("channels");
+                if(array.length()<1||array.length()>200)return false;
+                ArrayList<String> nn=new ArrayList<>(), uu=new ArrayList<>();HashSet<String> seen=new HashSet<>();
+                for(int i=0;i<array.length();i++){
+                    JSONObject o=array.getJSONObject(i);String n=o.getString("name").trim(),u=o.getString("url").trim();
+                    if(n.isEmpty()||n.length()>60||!validHttps(u)||!seen.add(n))return false;
+                    nn.add(n);uu.add(u);
+                }
+                names=nn.toArray(new String[0]);urls=uu.toArray(new String[0]);return true;
+            }
+            private void refreshList(boolean manual){
+                final int request=++refreshGeneration;
+                final String address=getPreferences(MODE_PRIVATE).getString("list_url",DEFAULT_LIST);
+                new Thread(()->{
+                    try{
+                        if(!validHttps(address))throw new IOException();
+                        HttpsURLConnection c=(HttpsURLConnection)new URL(address).openConnection();
+                        c.setConnectTimeout(7000);c.setReadTimeout(7000);c.setInstanceFollowRedirects(false);
+                        String data;
+                        try{
+                            if(c.getResponseCode()!=200)throw new IOException();
+                            try(InputStream in=c.getInputStream();ByteArrayOutputStream out=new ByteArrayOutputStream()){
+                                byte[] buf=new byte[4096];int count;while((count=in.read(buf))!=-1){out.write(buf,0,count);if(out.size()>262144)throw new IOException();}
+                                data=new String(out.toByteArray(),StandardCharsets.UTF_8);
+                            }
+                        }finally{c.disconnect();}
+                        runOnUiThread(()->{
+                            if(!active||request!=refreshGeneration)return;
+                            String old=names[index],oldUrl=urls[index];
+                            try{
+                                if(!applyList(data))throw new IOException();
+                                getPreferences(MODE_PRIVATE).edit().putString("cached_list",data).apply();
+                                index=0;for(int i=0;i<names.length;i++)if(names[i].equals(old)){index=i;break;}
+                                if(!old.equals(names[index])||!oldUrl.equals(urls[index]))tune(index);
+                                else getPreferences(MODE_PRIVATE).edit().putInt("last",index).putString("last_name",names[index]).apply();
+                                if(panel!=null){closeMenu();openMenu();}
+                                if(manual)Toast.makeText(this,"Lista atualizada: "+names.length+" canais",Toast.LENGTH_LONG).show();
+                            }catch(Exception e){if(manual)Toast.makeText(this,"Lista inválida. Mantivemos os canais anteriores.",Toast.LENGTH_LONG).show();}
+                        });
+                    }catch(Exception e){runOnUiThread(()->{if(active&&request==refreshGeneration&&manual)Toast.makeText(this,"Não foi possível atualizar. Canais anteriores mantidos.",Toast.LENGTH_LONG).show();});}
+                }).start();
+            }
             private void setupHome(){
                 new AlertDialog.Builder(this).setTitle("Abrir a TV ao ligar")
                   .setMessage("Se o aparelho permitir, escolha RAF TV FÁCIL como app de início (Home). Assim, a TV abrirá quando o aparelho carregar sua tela inicial. Para voltar ao menu original do aparelho, altere novamente o app de início nas configurações. Alguns TV Boxes não oferecem essa opção.")
@@ -187,6 +291,7 @@ jobs:
             @Override public boolean dispatchKeyEvent(KeyEvent e){
                 int k=e.getKeyCode();boolean down=e.getAction()==KeyEvent.ACTION_DOWN;
                 if(k==KeyEvent.KEYCODE_CHANNEL_UP || k==KeyEvent.KEYCODE_CHANNEL_DOWN){if(down&&e.getRepeatCount()==0){closeMenu();tune(index+(k==KeyEvent.KEYCODE_CHANNEL_UP?1:-1));}return true;}
+                if(k==KeyEvent.KEYCODE_MENU){if(down&&e.getRepeatCount()==0){if(panel==null)openMenu();else installer();}return true;}
                 if(panel==null){
                     if(k==KeyEvent.KEYCODE_DPAD_UP||k==KeyEvent.KEYCODE_DPAD_RIGHT||k==KeyEvent.KEYCODE_DPAD_DOWN||k==KeyEvent.KEYCODE_DPAD_LEFT){if(down&&e.getRepeatCount()==0)tune(index+((k==KeyEvent.KEYCODE_DPAD_UP||k==KeyEvent.KEYCODE_DPAD_RIGHT)?1:-1));return true;}
                     if(k==KeyEvent.KEYCODE_DPAD_CENTER||k==KeyEvent.KEYCODE_ENTER||k==KeyEvent.KEYCODE_MENU){if(down&&e.getRepeatCount()==0)openMenu();return true;}
@@ -198,16 +303,16 @@ jobs:
         RAF_FILE_7
         mkdir -p '.'
         cat > 'README.md' <<'RAF_FILE_8'
-        # RAF TV FÁCIL 1.0 — protótipo Android TV / TV Box
+        # RAF TV FÁCIL 1.1 — protótipo Android TV / TV Box
         Aplicativo separado, sem cadastro, sem alteração do RAF STREAMING. Android 6+ (API 23), player HLS Media3.
 
         ## Instalação de teste
         1. Gere o APK pelo workflow manual do GitHub Actions. Baixe o artefato ZIP, extraia e instale o APK no aparelho.
         2. Abra o aplicativo. Setas trocam canal; OK abre a lista; Voltar alterna lista e TV. Volume usa o controle do aparelho.
-        3. Para abrir automaticamente, na lista selecione Configuração inicial (instalador). Selecione RAF TV FÁCIL como aplicativo de início (Home), **somente se o aparelho disponibilizar essa escolha**. Para desfazer, retorne às configurações de Home e escolha o launcher anterior. Não há bloqueio de sistema nem garantia de abertura automática em qualquer aparelho.
+        3. Para abrir automaticamente, na lista mantenha OK pressionado sobre um canal (ou MENU duas vezes, ou toque longo no título). Selecione Abrir TV ao ligar o aparelho. Selecione RAF TV FÁCIL como aplicativo de início (Home), **somente se o aparelho disponibilizar essa escolha**. Para desfazer, retorne às configurações de Home e escolha o launcher anterior. Não há bloqueio de sistema nem garantia de abertura automática em qualquer aparelho.
 
         ## Limitações
-        Três URLs de teste de emissoras públicas em domínios institucionais (TV Câmara, TV Brasil, TV Senado), encontradas em listas públicas; ainda não testadas em reprodução nem confirmadas individualmente para uso em app de terceiros. A TV Câmara fornece oficialmente player incorporável em https://www.camara.leg.br/tv/como-sintonizar. Verifique autorização/condições de uso de cada emissora antes de distribuir; substitua/remova fontes não aprovadas. Não há retransmissão por servidor próprio. O APK de depuração é para teste, não distribuição comercial; versões de produção devem usar chave de assinatura persistente.
+        Sete entradas experimentais de fontes públicas ou associadas a emissoras, sem autorização individual confirmada; somente TV Câmara foi testada pelo usuário na versão anterior. TV Câmara 2 pode não transmitir 24h. Não incluir espelhos desconhecidos. TV Aparecida requer autorização expressa. Os cartões usam nomes e cores próprias, sem logotipos oficiais. A lista remota opcional lê canais.json na raiz do repositório ao abrir; mantém cache ou lista inicial se falhar. Formato: objeto JSON com array channels contendo name e url HTTPS HLS. Até 200 entradas. Não use listas sem autorização. A TV Câmara fornece oficialmente player incorporável em https://www.camara.leg.br/tv/como-sintonizar. Verifique autorização/condições de uso de cada emissora antes de distribuir; substitua/remova fontes não aprovadas. Não há retransmissão por servidor próprio. O APK de depuração é para teste, não distribuição comercial; versões de produção devem usar chave de assinatura persistente.
         RAF_FILE_8
     - name: Instalar SDK e compilar
       shell: bash
@@ -228,9 +333,9 @@ jobs:
         cd raf-tv-facil
         gradle --no-daemon :app:assembleDebug
         mkdir -p ../dist
-        cp app/build/outputs/apk/debug/app-debug.apk ../dist/RAF-TV-FACIL-V1.0.1-Android-TV.apk
+        cp app/build/outputs/apk/debug/app-debug.apk ../dist/RAF-TV-FACIL-V1.1-Android-TV.apk
     - uses: actions/upload-artifact@v4
       with:
-        name: RAF-TV-FACIL-V1.0.1-Android-TV
-        path: dist/RAF-TV-FACIL-V1.0.1-Android-TV.apk
+        name: RAF-TV-FACIL-V1.1-Android-TV
+        path: dist/RAF-TV-FACIL-V1.1-Android-TV.apk
         if-no-files-found: error
