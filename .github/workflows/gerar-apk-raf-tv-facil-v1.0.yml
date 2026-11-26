@@ -1,0 +1,225 @@
+name: RAF TV FACIL V1.0 - Gerar APK
+'on':
+  workflow_dispatch: {}
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-java@v4
+      with:
+        distribution: temurin
+        java-version: '17'
+    - uses: android-actions/setup-android@v3
+    - uses: gradle/actions/setup-gradle@v4
+      with:
+        gradle-version: '8.9'
+    - name: Criar projeto independente
+      shell: bash
+      run: |
+        set -eu
+        mkdir -p raf-tv-facil
+        cd raf-tv-facil
+        mkdir -p '.'
+        cat > 'settings.gradle' <<'RAF_FILE_0'
+        pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
+        dependencyResolutionManagement { repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS); repositories { google(); mavenCentral() } }
+        rootProject.name = 'RAF-TV-FACIL'
+        include ':app'
+        RAF_FILE_0
+        mkdir -p '.'
+        cat > 'build.gradle' <<'RAF_FILE_1'
+        plugins { id 'com.android.application' version '8.7.3' apply false }
+        RAF_FILE_1
+        mkdir -p '.'
+        cat > 'gradle.properties' <<'RAF_FILE_2'
+        android.useAndroidX=true
+        org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+        RAF_FILE_2
+        mkdir -p 'app'
+        cat > 'app/build.gradle' <<'RAF_FILE_3'
+        plugins { id 'com.android.application' }
+        android {
+         namespace 'br.com.raf.tvfacil'
+         compileSdk 35
+         defaultConfig { applicationId 'br.com.raf.tvfacil'; minSdk 23; targetSdk 34; versionCode 1; versionName '1.0' }
+         compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+        }
+        dependencies {
+         implementation 'androidx.media3:media3-exoplayer:1.4.1'
+         implementation 'androidx.media3:media3-exoplayer-hls:1.4.1'
+         implementation 'androidx.media3:media3-ui:1.4.1'
+        }
+        RAF_FILE_3
+        mkdir -p 'app/src/main'
+        cat > 'app/src/main/AndroidManifest.xml' <<'RAF_FILE_4'
+        <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+         <uses-permission android:name="android.permission.INTERNET"/>
+         <uses-feature android:name="android.software.leanback" android:required="false"/>
+         <uses-feature android:name="android.hardware.touchscreen" android:required="false"/>
+         <application android:label="RAF TV FÁCIL" android:icon="@drawable/tv_icon" android:banner="@drawable/tv_banner" android:theme="@android:style/Theme.Material.NoActionBar.Fullscreen" android:allowBackup="false" android:usesCleartextTraffic="false">
+          <activity android:name=".MainActivity" android:exported="true" android:screenOrientation="landscape" android:launchMode="singleTask">
+           <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter>
+           <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LEANBACK_LAUNCHER"/></intent-filter>
+          </activity>
+          <activity-alias android:name=".HomeTV" android:targetActivity=".MainActivity" android:exported="true" android:label="RAF TV FÁCIL">
+           <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.HOME"/><category android:name="android.intent.category.DEFAULT"/></intent-filter>
+          </activity-alias>
+         </application>
+        </manifest>
+        RAF_FILE_4
+        mkdir -p 'app/src/main/res/drawable'
+        cat > 'app/src/main/res/drawable/tv_icon.xml' <<'RAF_FILE_5'
+        <vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="96dp" android:height="96dp" android:viewportWidth="96" android:viewportHeight="96">
+        <path android:fillColor="#142C50" android:pathData="M0,0H96V96H0Z"/><path android:fillColor="#FFFFFF" android:pathData="M12,23H84V72H12Z"/><path android:fillColor="#245BC1" android:pathData="M18,29H78V66H18Z"/><path android:fillColor="#FFFFFF" android:pathData="M40,36L62,48L40,60Z M30,77H66V82H30Z"/></vector>
+        RAF_FILE_5
+        mkdir -p 'app/src/main/res/drawable'
+        cat > 'app/src/main/res/drawable/tv_banner.xml' <<'RAF_FILE_6'
+        <vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="320dp" android:height="180dp" android:viewportWidth="320" android:viewportHeight="180">
+        <path android:fillColor="#142C50" android:pathData="M0,0H320V180H0Z"/><path android:fillColor="#FFFFFF" android:pathData="M69,26H251V139H69Z M125,148H195V156H125Z"/><path android:fillColor="#245BC1" android:pathData="M79,36H241V129H79Z"/><path android:fillColor="#FFFFFF" android:pathData="M143,54L190,82L143,110Z"/></vector>
+        RAF_FILE_6
+        mkdir -p 'app/src/main/java/br/com/raf/tvfacil'
+        cat > 'app/src/main/java/br/com/raf/tvfacil/MainActivity.java' <<'RAF_FILE_7'
+        package br.com.raf.tvfacil;
+
+        import android.app.*;
+        import android.os.*;
+        import android.content.*;
+        import android.graphics.Color;
+        import android.graphics.drawable.GradientDrawable;
+        import android.view.*;
+        import android.widget.*;
+        import android.provider.Settings;
+        import androidx.media3.common.*;
+        import androidx.media3.exoplayer.ExoPlayer;
+        import androidx.media3.ui.PlayerView;
+
+        public class MainActivity extends Activity {
+            // Lista inicial experimental: apenas endereços de emissoras públicas.
+            private final String[] names = {"TV Câmara", "TV Brasil", "TV Senado"};
+            private final String[] urls = {
+                "https://stream3.camara.gov.br/tv1/manifest.m3u8",
+                "https://tvbrasil-stream.ebc.com.br/index.m3u8",
+                "https://stream3.camara.gov.br/tvsenado/manifest.m3u8"
+            };
+            private int index = 0;
+            private FrameLayout root;
+            private PlayerView video;
+            private ExoPlayer player;
+            private TextView status, banner;
+            private LinearLayout panel;
+            private final Handler handler = new Handler(Looper.getMainLooper());
+            private final Runnable hideBanner = () -> { if (banner != null) banner.setVisibility(View.GONE); };
+            private final Runnable timeout = () -> { if (player != null && player.getPlaybackState() != Player.STATE_READY) showStatus("Canal demorando a carregar.\nUse as setas para trocar ou OK para tentar novamente."); };
+            private int dp(float n) { return (int)(n * getResources().getDisplayMetrics().density + .5f); }
+            @Override public void onCreate(Bundle b) {
+                super.onCreate(b);
+                getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+                index = Math.max(0, Math.min(names.length-1, getPreferences(MODE_PRIVATE).getInt("last", 0)));
+                root = new FrameLayout(this); root.setBackgroundColor(Color.BLACK);
+                video = new PlayerView(this); video.setUseController(false); video.setFocusable(false);
+                video.setOnClickListener(v -> toggleMenu());
+                root.addView(video, new FrameLayout.LayoutParams(-1,-1));
+                status = label("", 26); status.setGravity(Gravity.CENTER); status.setBackgroundColor(0xDC101C2E); status.setPadding(dp(18),dp(16),dp(18),dp(16));
+                FrameLayout.LayoutParams st = new FrameLayout.LayoutParams(-1,-2,Gravity.CENTER); st.setMargins(dp(24),0,dp(24),0);
+                root.addView(status,st); status.setVisibility(View.GONE);
+                banner = label("", 25); banner.setBackgroundColor(0xE0101C2E); banner.setPadding(dp(20),dp(16),dp(20),dp(16));
+                FrameLayout.LayoutParams bp = new FrameLayout.LayoutParams(-1,-2,Gravity.BOTTOM); root.addView(banner,bp); banner.setVisibility(View.GONE);
+                setContentView(root); immersive();
+            }
+            private TextView label(String text, int size) { TextView t = new TextView(this); t.setText(text); t.setTextSize(size); t.setTextColor(Color.WHITE); return t; }
+            private void immersive() { getWindow().getDecorView().setSystemUiVisibility(5894 | View.SYSTEM_UI_FLAG_LAYOUT_STABLE); }
+            @Override public void onWindowFocusChanged(boolean f) { super.onWindowFocusChanged(f); if(f) immersive(); }
+            @Override protected void onStart() { super.onStart(); if(player==null) {
+                player=new ExoPlayer.Builder(this).build(); video.setPlayer(player);
+                player.addListener(new Player.Listener(){
+                    @Override public void onPlaybackStateChanged(int s) {
+                        if(s==Player.STATE_READY) { handler.removeCallbacks(timeout); status.setVisibility(View.GONE); }
+                        else if(s==Player.STATE_BUFFERING) showStatus("Carregando " + names[index] + "…");
+                        else if(s==Player.STATE_ENDED) showStatus("Transmissão encerrada.\nEscolha outro canal ou tente novamente.");
+                    }
+                    @Override public void onPlayerError(PlaybackException e) { handler.removeCallbacks(timeout); showStatus("Canal indisponível.\nUse as setas ou OK para escolher outro."); }
+                });
+                tune(index);
+            }}
+            @Override protected void onStop() { handler.removeCallbacksAndMessages(null); if(player!=null){video.setPlayer(null);player.release();player=null;} super.onStop(); }
+            private void showStatus(String text){ status.setText(text);status.setVisibility(View.VISIBLE); }
+            private void tune(int n){
+                index=(n+names.length)%names.length; getPreferences(MODE_PRIVATE).edit().putInt("last",index).apply();
+                banner.setText(String.format(java.util.Locale.ROOT,"%02d   %s     •     ↑ ↓ Trocar     •     OK Canais",index+1,names[index])); banner.setVisibility(View.VISIBLE);
+                handler.removeCallbacks(hideBanner);handler.postDelayed(hideBanner,4500);
+                if(player==null)return;
+                showStatus("Carregando " + names[index] + "…");
+                player.setMediaItem(new MediaItem.Builder().setUri(urls[index]).setMimeType(MimeTypes.APPLICATION_M3U8).build());
+                player.prepare();player.play();handler.removeCallbacks(timeout);handler.postDelayed(timeout,15000);
+            }
+            private GradientDrawable bg(int color){GradientDrawable g=new GradientDrawable();g.setColor(color);g.setCornerRadius(dp(10));return g;}
+            private Button action(String name, Runnable run){
+                Button b=new Button(this);b.setText(name);b.setAllCaps(false);b.setTextSize(23);b.setTextColor(Color.WHITE);b.setMinHeight(dp(52));b.setFocusable(true);b.setFocusableInTouchMode(true);b.setId(View.generateViewId());b.setBackground(bg(0xFF26394F));
+                b.setOnFocusChangeListener((v,f)->{ b.setBackground(bg(f?0xFF245BC1:0xFF26394F)); });b.setOnClickListener(v->run.run());return b;
+            }
+            private void closeMenu(){if(panel!=null){root.removeView(panel);panel=null;} immersive();}
+            private void toggleMenu(){if(panel!=null)closeMenu();else openMenu();}
+            private void openMenu(){
+                if(panel!=null)return;
+                panel=new LinearLayout(this);panel.setOrientation(LinearLayout.VERTICAL);panel.setPadding(dp(24),dp(12),dp(24),dp(12));panel.setBackgroundColor(0xF2101C2E);panel.setClickable(true);
+                FrameLayout.LayoutParams p=new FrameLayout.LayoutParams(-1,-1);root.addView(panel,p);
+                TextView title=label("RAF TV FÁCIL — Escolha seu canal",28);panel.addView(title);
+                ScrollView scroll=new ScrollView(this);scroll.setFillViewport(false);panel.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
+                LinearLayout list=new LinearLayout(this);list.setOrientation(LinearLayout.VERTICAL);scroll.addView(list);
+                Button selected=null;
+                for(int i=0;i<names.length;i++){ final int ch=i;Button b=action(String.format(java.util.Locale.ROOT,"%02d    %s",i+1,names[i]),()->{closeMenu();tune(ch);});addButton(list,b);if(i==index)selected=b; }
+                addButton(list,action("Voltar à TV",()->closeMenu()));
+                addButton(list,action("Configuração inicial (instalador)",()->setupHome()));
+                if(selected!=null)selected.requestFocus();
+            }
+            private void addButton(LinearLayout container,Button b){LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.setMargins(0,dp(6),0,0);container.addView(b,lp);}
+            private void setupHome(){
+                new AlertDialog.Builder(this).setTitle("Abrir a TV ao ligar")
+                  .setMessage("Se o aparelho permitir, escolha RAF TV FÁCIL como app de início (Home). Assim, a TV abrirá quando o aparelho carregar sua tela inicial. Para voltar ao menu original do aparelho, altere novamente o app de início nas configurações. Alguns TV Boxes não oferecem essa opção.")
+                  .setNegativeButton("Cancelar",null).setPositiveButton("Abrir configuração",(d,w)->{
+                      try{ startActivity(new Intent(Settings.ACTION_HOME_SETTINGS)); }
+                      catch(ActivityNotFoundException e){ try{startActivity(new Intent(Settings.ACTION_SETTINGS));}catch(Exception ignored){Toast.makeText(this,"Configuração não disponível neste aparelho",Toast.LENGTH_LONG).show();} }
+                  }).show();
+            }
+            @Override public boolean dispatchKeyEvent(KeyEvent e){
+                int k=e.getKeyCode();boolean down=e.getAction()==KeyEvent.ACTION_DOWN;
+                if(k==KeyEvent.KEYCODE_CHANNEL_UP || k==KeyEvent.KEYCODE_CHANNEL_DOWN){if(down&&e.getRepeatCount()==0){closeMenu();tune(index+(k==KeyEvent.KEYCODE_CHANNEL_UP?1:-1));}return true;}
+                if(panel==null){
+                    if(k==KeyEvent.KEYCODE_DPAD_UP||k==KeyEvent.KEYCODE_DPAD_RIGHT||k==KeyEvent.KEYCODE_DPAD_DOWN||k==KeyEvent.KEYCODE_DPAD_LEFT){if(down&&e.getRepeatCount()==0)tune(index+((k==KeyEvent.KEYCODE_DPAD_UP||k==KeyEvent.KEYCODE_DPAD_RIGHT)?1:-1));return true;}
+                    if(k==KeyEvent.KEYCODE_DPAD_CENTER||k==KeyEvent.KEYCODE_ENTER||k==KeyEvent.KEYCODE_MENU){if(down&&e.getRepeatCount()==0)openMenu();return true;}
+                }
+                return super.dispatchKeyEvent(e);
+            }
+            @Override public void onBackPressed(){if(panel!=null)closeMenu();else openMenu();}
+        }
+        RAF_FILE_7
+        mkdir -p '.'
+        cat > 'README.md' <<'RAF_FILE_8'
+        # RAF TV FÁCIL 1.0 — protótipo Android TV / TV Box
+        Aplicativo separado, sem cadastro, sem alteração do RAF STREAMING. Android 6+ (API 23), player HLS Media3.
+
+        ## Instalação de teste
+        1. Gere o APK pelo workflow manual do GitHub Actions. Baixe o artefato ZIP, extraia e instale o APK no aparelho.
+        2. Abra o aplicativo. Setas trocam canal; OK abre a lista; Voltar alterna lista e TV. Volume usa o controle do aparelho.
+        3. Para abrir automaticamente, na lista selecione Configuração inicial (instalador). Selecione RAF TV FÁCIL como aplicativo de início (Home), **somente se o aparelho disponibilizar essa escolha**. Para desfazer, retorne às configurações de Home e escolha o launcher anterior. Não há bloqueio de sistema nem garantia de abertura automática em qualquer aparelho.
+
+        ## Limitações
+        Três URLs de teste de emissoras públicas em domínios institucionais (TV Câmara, TV Brasil, TV Senado), encontradas em listas públicas; ainda não testadas em reprodução nem confirmadas individualmente para uso em app de terceiros. A TV Câmara fornece oficialmente player incorporável em https://www.camara.leg.br/tv/como-sintonizar. Verifique autorização/condições de uso de cada emissora antes de distribuir; substitua/remova fontes não aprovadas. Não há retransmissão por servidor próprio. O APK de depuração é para teste, não distribuição comercial; versões de produção devem usar chave de assinatura persistente.
+        RAF_FILE_8
+    - name: Instalar SDK e compilar
+      shell: bash
+      run: |
+        sdkmanager "platforms;android-35" "build-tools;35.0.0"
+        cd raf-tv-facil
+        gradle --no-daemon :app:assembleDebug
+        mkdir -p ../dist
+        cp app/build/outputs/apk/debug/app-debug.apk ../dist/RAF-TV-FACIL-V1.0-Android-TV.apk
+    - uses: actions/upload-artifact@v4
+      with:
+        name: RAF-TV-FACIL-V1.0-Android-TV
+        path: dist/RAF-TV-FACIL-V1.0-Android-TV.apk
+        if-no-files-found: error
