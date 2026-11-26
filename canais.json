@@ -27,6 +27,42 @@
     {
       "name": "TV Câmara 2",
       "url": "https://stream3.camara.gov.br/tv2/manifest.m3u8"
+    },
+    {
+      "name": "Canal Educação",
+      "url": "https://canaleducacao-stream.ebc.com.br/index.m3u8"
+    },
+    {
+      "name": "Canal Saúde",
+      "url": "https://arkyvbre1g.zoeweb.tv/fiocruz/fiocruz.stream/playlist.m3u8"
+    },
+    {
+      "name": "Rede Minas",
+      "url": "https://8hzcavccys.zoeweb.tv/redeminas/ngrp:redeminas_all/playlist.m3u8"
+    },
+    {
+      "name": "SBT RJ",
+      "url": "https://sbt.cdnsimba.com.br/bpk-tv/SBTrj/default/index.m3u8"
+    },
+    {
+      "name": "SBT Interior",
+      "url": "https://cdn.jmvstream.com/w/LVW-10801/LVW10801_Xvg4R0u57n/playlist.m3u8"
+    },
+    {
+      "name": "RedeTV!",
+      "url": "https://hls.brasilstream.com.br/live/redetv/redetv/playlist.m3u8"
+    },
+    {
+      "name": "Record News",
+      "url": "https://rnw-rn.otteravision.com/rnw/rn/rnw_rn.m3u8"
+    },
+    {
+      "name": "TV Gazeta",
+      "url": "https://tv.nuvemplay.live/hls/40gtv/stream.m3u8"
+    },
+    {
+      "name": "SBT News",
+      "url": "https://dai.google.com/linear/hls/event/1XSOdtQ0SH2G8OEmEfGgjQ/master.m3u8"
     }
   ]
 }
