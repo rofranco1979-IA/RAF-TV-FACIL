@@ -1,0 +1,147 @@
+name: RAF TV FACIL - Validar desenhos V1
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  validar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Baixar relatorio V5 da segunda execucao
+        uses: actions/download-artifact@v4
+        with:
+          name: RAF-TV-FACIL-Relatorio-Desenhos-V5
+          run-id: 46057837006
+          github-token: ${{ github.token }}
+          path: entrada
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Instalar dependencias
+        run: |
+          python -m pip install requests
+          command -v ffprobe || (sudo apt-get update && sudo apt-get install -y ffmpeg)
+      - name: Validar continuidade e amostras publicas elegiveis
+        shell: bash
+        run: |
+          python - <<'PYCODE'
+          import csv, json, re, time, tempfile, subprocess, concurrent.futures, ipaddress, socket
+          from pathlib import Path
+          from urllib.parse import urlsplit, urljoin, parse_qs
+          import requests
+          OUT=Path('resultado'); OUT.mkdir(exist_ok=True)
+          report=json.loads(Path('entrada/relatorio.json').read_text(encoding='utf-8-sig'))
+          rows=[r for r in report['candidatos'] if r['resultado'].startswith('HLS AO VIVO')]
+          HEAD={'User-Agent':'RAF-TV-FACIL-public-compatibility-check/1.0'}
+
+          def eligible(u):
+              try:
+                  p=urlsplit(u); h=p.hostname or ''
+                  if p.scheme!='https' or not h or p.username or p.password or p.port not in (None,443): return False
+                  if any(k in u.lower() for k in ('pluto.tv','/pluto','youtube.com','googlevideo.com','/get.php','/player_api.php')): return False
+                  if any(re.search(r'token|signature|auth|policy|expires|session|key|password|username|jwt|credential',k,re.I) for k in parse_qs(p.query)): return False
+                  return all(ipaddress.ip_address(x[4][0]).is_global for x in socket.getaddrinfo(h,443,type=socket.SOCK_STREAM))
+              except Exception: return False
+
+          def get(u,limit=400000):
+              for _ in range(5):
+                  if not eligible(u): raise ValueError('URL não elegível')
+                  with requests.get(u,headers=HEAD,timeout=(5,10),allow_redirects=False,stream=True) as r:
+                      if r.is_redirect:
+                          u=urljoin(u,r.headers['Location']);continue
+                      r.raise_for_status(); b=bytearray()
+                      for chunk in r.iter_content(32768):
+                          b.extend(chunk)
+                          if len(b)>limit: raise ValueError('limite de tamanho')
+                      return u,bytes(b)
+              raise ValueError('redirecionamentos excessivos')
+
+          def attributes(s): return {k:v.strip('"') for k,v in re.findall(r'([A-Z0-9-]+)=("[^"]*"|[^,]*)',s)}
+          def playlist(u):
+              final,b=get(u); m=b.decode('utf-8-sig','replace')
+              if not m.lstrip().startswith('#EXTM3U'): raise ValueError('não é HLS')
+              if re.search(r'#EXT-X-(?:SESSION-)?KEY:.*METHOD=(?!NONE(?:,|\s|$))',m): raise ValueError('proteção de mídia; não testado')
+              if '#EXT-X-ENDLIST' in m: raise ValueError('lista encerrada/VOD')
+              return final,m
+
+          def media(u):
+              langs=set(); codecs=set()
+              for _ in range(4):
+                  final,m=playlist(u); lines=[s.strip() for s in m.splitlines() if s.strip()]; variants=[]
+                  for i,line in enumerate(lines):
+                      if line.startswith('#EXT-X-MEDIA:'):
+                          a=attributes(line.split(':',1)[1]);
+                          if a.get('TYPE')=='AUDIO' and a.get('LANGUAGE'): langs.add(a['LANGUAGE'])
+                      if line.startswith('#EXT-X-STREAM-INF:') and i+1<len(lines) and not lines[i+1].startswith('#'):
+                          a=attributes(line.split(':',1)[1]); variants.append((int(a.get('BANDWIDTH','0')),urljoin(final,lines[i+1]),a.get('CODECS','')))
+                  if variants:
+                      _,u,c=sorted(variants)[0]; codecs.update(x.strip() for x in c.split(',') if x.strip()); continue
+                  segments=[urljoin(final,line) for line in lines if not line.startswith('#')]
+                  if '#EXTINF:' not in m or not segments: raise ValueError('sem segmentos')
+                  seq=re.search(r'#EXT-X-MEDIA-SEQUENCE:(\d+)',m); target=re.search(r'#EXT-X-TARGETDURATION:(\d+)',m)
+                  return final,m,segments,int(seq.group(1)) if seq else None,int(target.group(1)) if target else 6,langs,codecs
+              raise ValueError('variantes demais')
+
+          # Identidade documentada do canal não equivale a licença de distribuição.
+          # Somente sinais de canais FAST com distribuidor identificado recebem amostra de mídia.
+          # Os demais ficam restritos à validação de manifesto, até haver evidência de origem.
+          SAMPLE={'RetroCrush','FilmRise Anime','ToonGoggles'}
+
+          def validate(r):
+              name=r['nome']; u=r.get('url_candidata','')
+              out={'canal':name,'catalogo_idioma':r['idioma'],'manifesto':'NÃO TESTADO','continuidade':'NÃO TESTADA','video':'NÃO TESTADO','audio':'NÃO TESTADO','idiomas_declarados':[], 'codecs_manifesto':[], 'codecs_amostra':[], 'autorizacao':'PENDENTE','brasil':'NÃO VERIFICADO (runner GitHub)','observacao':''}
+              if 'geo-blocked' in name.casefold():
+                  out['observacao']='Excluído por indicação de bloqueio geográfico';return out
+              try:
+                  final,m,segs,seq,target,langs,codecs=media(u)
+                  out['manifesto']='HLS AO VIVO';out['idiomas_declarados']=sorted(langs);out['codecs_manifesto']=sorted(codecs)
+                  time.sleep(min(30,max(12,2*target)))
+                  final2,m2,segs2,seq2,_,langs2,codecs2=media(u)
+                  out['continuidade']='AVANÇOU' if (seq is not None and seq2 is not None and seq2>seq) or segs2!=segs else 'SEM AVANÇO OBSERVADO'
+                  out['idiomas_declarados']=sorted(langs|langs2);out['codecs_manifesto']=sorted(codecs|codecs2)
+                  if not any(name.startswith(k) for k in SAMPLE):
+                      out['observacao']='Amostra não coletada: origem/distribuição ou território ainda pendente';return out
+                  if '#EXT-X-BYTERANGE' in m2 or '#EXT-X-GAP' in m2:
+                      out['observacao']='Formato de segmentos exige revisão manual';return out
+                  init=b''
+                  maps=re.findall(r'#EXT-X-MAP:(.*)',m2)
+                  # Usar somente uma configuração estável, sem ranges nem credenciais.
+                  if maps:
+                      if len(set(maps))!=1: raise ValueError('inicializações múltiplas')
+                      a=attributes(maps[0]);
+                      if 'BYTERANGE' in a or not a.get('URI'): raise ValueError('inicialização por intervalo ou ausente')
+                      _,init=get(urljoin(final2,a['URI']),2_000_000)
+                  _,sample=get(segs2[-1],12_000_000)
+                  with tempfile.TemporaryDirectory() as td:
+                      f=Path(td)/'sample.bin';f.write_bytes(init+sample)
+                      cmd=['ffprobe','-v','error','-protocol_whitelist','file,pipe','-show_entries','stream=codec_type,codec_name,width,height:stream_tags=language','-of','json',str(f)]
+                      p=subprocess.run(cmd,capture_output=True,text=True,timeout=15)
+                      streams=json.loads(p.stdout or '{}').get('streams',[]) if p.returncode==0 else []
+                      out['video']='DETECTADO' if any(x.get('codec_type')=='video' for x in streams) else 'NÃO DETECTADO NA AMOSTRA'
+                      out['audio']='DETECTADO' if any(x.get('codec_type')=='audio' for x in streams) else 'NÃO DETECTADO NA AMOSTRA (pode ser separado)'
+                      out['codecs_amostra']=sorted({x['codec_name'] for x in streams if x.get('codec_name')})
+                      out['idiomas_declarados']=sorted(set(out['idiomas_declarados'])|{x.get('tags',{}).get('language','') for x in streams if x.get('codec_type')=='audio' and x.get('tags',{}).get('language') not in ('',None,'und')})
+                      out['observacao']='Idioma declarado não comprova dublagem; nenhuma mídia armazenada no relatório'
+              except Exception as e:
+                  # Não expor URLs ou credenciais nos logs.
+                  out['observacao']='Teste interrompido: '+type(e).__name__+(' HTTP '+str(e.response.status_code) if isinstance(e,requests.HTTPError) and e.response is not None else '')
+              return out
+
+          with concurrent.futures.ThreadPoolExecutor(max_workers=5) as ex: results=list(ex.map(validate,rows))
+          (OUT/'validacao.json').write_text(json.dumps(results,ensure_ascii=False,indent=2),encoding='utf-8')
+          with (OUT/'validacao.csv').open('w',encoding='utf-8-sig',newline='') as f:
+              w=csv.DictWriter(f,fieldnames=list(results[0]) if results else ['canal'],delimiter=';');w.writeheader();w.writerows(results)
+          for r in results: print(r['canal'],'|',r['manifesto'],'|',r['continuidade'],'| vídeo:',r['video'],'| áudio:',r['audio'],'| idioma:',','.join(r['idiomas_declarados']) or 'não informado','|',r['observacao'])
+          summary=f'Candidatos: {len(results)} | HLS: {sum(r["manifesto"]=="HLS AO VIVO" for r in results)} | Avanço: {sum(r["continuidade"]=="AVANÇOU" for r in results)} | Vídeo detectado: {sum(r["video"]=="DETECTADO" for r in results)} | Aprovados para publicação: 0'
+          print(summary)
+          (OUT/'LEIA-ME.txt').write_text(summary+'\nNenhuma lista modificada. Teste de amostra não comprova reprodução completa, dublagem, direitos de integração ou disponibilidade no Brasil. Não há contorno de geobloqueio nem autenticação.\n',encoding='utf-8')
+          PYCODE
+      - name: Salvar relatorio de validacao
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: RAF-TV-FACIL-Relatorio-Validacao-Desenhos-V1
+          path: resultado/
+          if-no-files-found: error
