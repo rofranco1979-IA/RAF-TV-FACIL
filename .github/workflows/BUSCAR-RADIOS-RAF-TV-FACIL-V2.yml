@@ -1,0 +1,125 @@
+name: Buscar radios e shows RAF TV FACIL V2
+'on':
+  workflow_dispatch: {}
+permissions:
+  contents: read
+jobs:
+  buscar:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+    - name: Instalar dependências
+      run: |
+        python -m pip install requests beautifulsoup4
+        sudo apt-get update -qq
+        sudo apt-get install -y ffmpeg
+    - name: Buscar rádios e canais musicais
+      shell: bash
+      run: |
+        mkdir -p resultado
+        python - <<'PY'
+        import concurrent.futures as cf
+        import csv, json, re, time, subprocess
+        from urllib.parse import urlsplit
+        import requests
+        from requests.exceptions import RequestException
+        from bs4 import BeautifulSoup
+
+        UA='RAF-TV-Facil-Radio-Compatibility/2.0'
+        HEAD={'User-Agent':UA,'Icy-MetaData':'1'}
+        API=['https://de1.api.radio-browser.info','https://nl1.api.radio-browser.info','https://at1.api.radio-browser.info']
+        # Public directories are discovery only, not a licence or proof of station identity.
+        queries=[('Rádios on-line',n) for n in ['Antena 1','Alpha FM','Saudade FM','Jovem Pan','Band FM','BandNews FM','CBN','Nativa FM','Mix FM','Rádio Disney','Rádio Nacional','Rádio MEC','Rádio Tok']]
+        queries += [('Rádios por ritmo','MGT '+n) for n in ['Universitária','Sertaneja','Love Hits','Brasil Hits','Forró','Retrô','Rock',"80",'Gospel','Light','Dance Hits','Country']]
+        queries += [('Rádios por ritmo',n) for n in ['Sertanejo Universitário','Sertanejo Raiz','Modão','Flashback','Samba','Pagode','MPB','Rock Clássico','Forró','Piseiro','Romântica','Gospel','Instrumental','Eletrônica','Radio Paradise']]
+        seeds=[{'name':'Rádio Tok','url':'https://cast2.hoost.com.br:20088/stream','homepage':'https://www.radiotok.com.br/ouca-ao-vivo/','category':'Rádios por ritmo','origin':'Site oficial, teste V1'},
+        {'name':'Radio Paradise','url':'https://stream.radioparadise.com/mp3-128','homepage':'https://radioparadise.com/','category':'Rádios por ritmo','origin':'Servidor da emissora, candidato'}]
+
+        def https(u):
+            try:
+                x=urlsplit(u);return x.scheme=='https' and bool(x.hostname) and not x.username and not x.password
+            except Exception:return False
+
+        def api_search(q):
+            category,name=q
+            for api in API:
+                try:
+                    r=requests.get(api+'/json/stations/search',params={'name':name,'hidebroken':'true','order':'votes','reverse':'true','limit':5,**({} if name=='Radio Paradise' else {'countrycode':'BR'})},headers=HEAD,timeout=9);r.raise_for_status()
+                    return [dict(name=s.get('name','').strip(),url=s.get('url_resolved') or s.get('url',''),homepage=s.get('homepage',''),logo=s.get('favicon',''),category=category,origin='Radio Browser (catálogo; verificar origem)',query=name) for s in r.json() if isinstance(s,dict)]
+                except (RequestException,ValueError):continue
+            print('Falha no catálogo:',name);return []
+
+        # Music TV: discovery using public catalogue, no stream bypass and no automatic import.
+        def music_tv():
+            try:
+                catalog=requests.get('https://iptv-org.github.io/iptv/categories/music.m3u',headers=HEAD,timeout=15);catalog.raise_for_status()
+                lines=catalog.text.splitlines();out=[]
+                for i,line in enumerate(lines[:-1]):
+                    if not line.startswith('#EXTINF'):continue
+                    if not re.search(r'\.br(?:@|\")|tvg-country="BR"|Brazil|Brasil|Sertanej|Samba|Pagode|Forr[oó]',line,re.I):continue
+                    url=lines[i+1].strip(); name=line.rsplit(',',1)[-1].strip()
+                    if https(url) and name:out.append(dict(name=name,url=url,category='Shows e músicas',homepage='',origin='IPTV-org (catálogo; verificar origem)'))
+                return out[:30]
+            except Exception as e:print('Catálogo musical:',str(e)[:120]);return []
+
+        def probe(s):
+            u=s['url'];row=dict(s,resultado='NÃO CONFIRMADO',formato='',http='',content_type='',evidencia='')
+            if not https(u):row['resultado']='IGNORADO: sem HTTPS';return row
+            try:
+                with requests.get(u,headers=HEAD,timeout=(5,7),stream=True,allow_redirects=True) as r:
+                    row['http']=r.status_code;ct=r.headers.get('content-type','').lower();row['content_type']=ct
+                    if not https(r.url) or any(not https(x.url) for x in r.history):row['resultado']='IGNORADO: redirecionamento inseguro';return row
+                    if not r.ok:return row
+                    sample=next(r.iter_content(4096),b'')
+                    if b'#EXTM3U' in sample and b'#EXT-X-' in sample:
+                        # Never use keys/DRM or try to circumvent restrictions.
+                        if b'#EXT-X-KEY' in sample or b'#EXT-X-SESSION-KEY' in sample:row['resultado']='IGNORADO: manifesto com chave';return row
+                        row['formato']='HLS';row['evidencia']='Manifesto HLS acessível; verificar se é ao vivo e autorizado'
+                    elif ct.startswith('audio/') and 'mpegurl' not in ct:
+                        if r.headers.get('Content-Length') or r.headers.get('Content-Range'):
+                            row['resultado']='IGNORADO: arquivo de tamanho definido';return row
+                        if re.search(r'/[^/?]+\.(mp3|aac|ogg|flac)(?:\?|$)',r.url,re.I) and not any(k.startswith('icy-') for k in r.headers):
+                            row['resultado']='IGNORADO: provável arquivo de música';return row
+                        row['formato']='AUDIO';row['evidencia']='Áudio sem tamanho fixo; '+('cabeçalhos ICY presentes' if any(k.startswith('icy-') for k in r.headers) else 'sem ICY')
+                    else:return row
+                # ffprobe confirms presence of audio or video, not station identity or rights.
+                cmd=['ffprobe','-v','error','-rw_timeout','6000000','-analyzeduration','3000000','-probesize','131072','-show_entries','stream=codec_type,codec_name:format=duration','-of','json',u]
+                cp=subprocess.run(cmd,capture_output=True,text=True,timeout=14)
+                if cp.returncode!=0:row['evidencia']+='; ffprobe não confirmou';return row
+                info=json.loads(cp.stdout); streams=info.get('streams',[]); kinds={x.get('codec_type') for x in streams};duration=info.get('format',{}).get('duration')
+                if duration not in (None,'N/A'):
+                    row['resultado']='IGNORADO: duração finita';return row
+                if 'audio' not in kinds and 'video' not in kinds:return row
+                if s['category']=='Shows e músicas' and 'video' not in kinds:row['resultado']='IGNORADO: sem vídeo';return row
+                if s['category'].startswith('Rádios') and 'audio' not in kinds:return row
+                row['resultado']='CANDIDATO AO VIVO';row['evidencia']+='; codecs '+','.join(sorted({x.get('codec_name','?') for x in streams}))
+            except Exception as e:row['evidencia']=str(e)[:160]
+            return row
+
+        with cf.ThreadPoolExecutor(max_workers=8) as ex:
+            candidates=seeds+[s for result in ex.map(api_search,queries) for s in result]+music_tv()
+        unique={}
+        for s in candidates:
+            if s.get('url') and s['url'] not in unique:unique[s['url']]=s
+        print('Endereços únicos encontrados:',len(unique))
+        with cf.ThreadPoolExecutor(max_workers=12) as ex:rows=list(ex.map(probe, list(unique.values())[:220]))
+        fields=['name','category','query','url','homepage','logo','origin','http','content_type','formato','resultado','evidencia']
+        with open('resultado/relatorio-radios-v2.csv','w',encoding='utf-8-sig',newline='') as f:
+            w=csv.DictWriter(f,fields,delimiter=';',extrasaction='ignore');w.writeheader();w.writerows(rows)
+        selected=[r for r in rows if r['resultado']=='CANDIDATO AO VIVO']
+        with open('resultado/candidatos-v2.json','w',encoding='utf-8') as f:json.dump(selected,f,ensure_ascii=False,indent=2)
+        print('Testados:',len(rows),'Candidatos ao vivo:',len(selected))
+        for r in selected:print(r['name'],'|',r['category'],'|',r['formato'],'|',r['evidencia'])
+        print('Nenhuma alteração na lista principal. Verificar origem, direitos de integração e reprodução real antes de importar.')
+
+        PY
+    - name: Salvar relatório
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: RAF-TV-FACIL-Relatorio-Radios-V2
+        path: resultado/
+        if-no-files-found: warn
