@@ -1,0 +1,155 @@
+name: RAF TV FACIL - Buscar desenhos e animes V5
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  buscar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Instalar dependencias
+        run: python -m pip install requests
+      - name: Pesquisar listas publicas genericas
+        shell: bash
+        run: |
+          python - <<'PYCODE'
+          import csv,json,re,unicodedata,concurrent.futures,subprocess,ipaddress,socket
+          from pathlib import Path
+          from urllib.parse import urlsplit,urljoin,parse_qs
+          import requests
+          OUT=Path('resultado'); OUT.mkdir(exist_ok=True)
+          SOURCES=[
+          ('IPTV-org animação','https://iptv-org.github.io/iptv/categories/animation.m3u',False,'animation'),
+          ('IPTV-org Brasil','https://iptv-org.github.io/iptv/countries/br.m3u',False,'br'),
+          ('IPTV-org português','https://iptv-org.github.io/iptv/languages/por.m3u',False,'pt'),
+          ('Free-TV','https://raw.githubusercontent.com/Free-TV/IPTV/master/playlist.m3u8',False,''),
+          ('Nexonic Brasil','https://nexonic-technologies.github.io/nexonic-iptv/playlists/countries/br.m3u',True,'br'),
+          ('Nexonic português','https://nexonic-technologies.github.io/nexonic-iptv/playlists/languages/pt.m3u',True,'pt'),
+          ('Nexonic verificados','https://nexonic-technologies.github.io/nexonic-iptv/playlists/verified.m3u',True,''),
+          ('FreeCastHub','https://raw.githubusercontent.com/freecasthub/public-iptv/main/playlist.m3u',True,''),
+          ('LegalFreeIPTV','https://biskyt.github.io/legalFreeIPTVplaylist/live.m3u',True,'')]
+          HEAD={'User-Agent':'RAF-TV-FACIL-public-channel-check/5.0'}
+          WATCH=['thundercats','thunder cats','caverna do dragao','dungeons and dragons','one piece','dragon ball','he-man','he man','she-ra','silverhawks','transformers','tartarugas ninja','teenage mutant ninja','cavaleiros do zodiaco','saint seiya','naruto','x-men','tom e jerry','tom and jerry','flintstones','papa-leguas','looney tunes','pantera cor-de-rosa','pink panther','pica-pau','woody woodpecker','scooby','bob esponja','spongebob','pokemon','popeye']
+          KEYS=['anime','animacao','animation','cartoon','desenho','retro toon','toon','geekdot','sato+','retrocrush','playtv','otaku','gospel cartoon']
+          LOW=['baby','bebe','preschool','pre school','peppa','galinha pintadinha','mundo bita','cocomelon','nursery','toddler','junior']
+          BLOCK=['pluto','youtube','googlevideo','twitch','ttvnw','adult','xxx','porn','18+']
+          PREMIUM=['cartoon network','disney channel','disney xd','nickelodeon','nicktoons','hbo','boomerang','tooncast','adult swim','crunchyroll']
+          def norm(s):return ''.join(c for c in unicodedata.normalize('NFKD',s.casefold()) if not unicodedata.combining(c))
+          def eligible(u):
+           try:
+            p=urlsplit(u); h=p.hostname or ''
+            if p.scheme!='https' or not h or p.username or p.password or p.port not in (None,443):return False
+            if any(k in h.casefold() for k in BLOCK) or any(k in u.casefold() for k in ('/pluto','/get.php','/player_api.php')):return False
+            if any(re.search(r'token|signature|auth|policy|expires|session|key|password|username|jwt|credential',k,re.I) for k in parse_qs(p.query)):return False
+            if not all(ipaddress.ip_address(x[4][0]).is_global for x in socket.getaddrinfo(h,443,type=socket.SOCK_STREAM)):return False
+            return True
+           except Exception:return False
+          def get(u,limit=12_000_000):
+           for _ in range(5):
+            if not eligible(u):raise ValueError('URL não elegível')
+            with requests.get(u,headers=HEAD,timeout=(6,12),allow_redirects=False,stream=True) as r:
+             if r.is_redirect:
+              u=urljoin(u,r.headers['Location']);continue
+             r.raise_for_status(); b=bytearray()
+             for x in r.iter_content(65536):
+              b.extend(x)
+              if len(b)>limit:raise ValueError('limite de tamanho')
+             return u,b.decode('utf-8-sig','replace')
+           raise ValueError('redirecionamentos excessivos')
+          def parse_m3u(body):
+           info=None; opts=False
+           for raw in body.splitlines():
+            line=raw.strip()
+            if line.startswith('#EXTINF:'):
+             # vírgula fora de aspas separa o nome
+             chunks=re.split(r',(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)',line,maxsplit=1)
+             if len(chunks)!=2:info=None;continue
+             info=(chunks[1].strip(),dict(re.findall(r'([\w-]+)="([^"]*)"',chunks[0])));opts=False
+            elif info and line.startswith(('#EXTVLCOPT','#KODIPROP','#EXTHTTP')):opts=True
+            elif info and line and not line.startswith('#'):
+             yield (*info,line,opts);info=None
+          
+          def collect(src):
+           name,url,curated,tag=src; rows=[]; count=0
+           try:
+            _,body=get(url)
+            if not body.lstrip().startswith('#EXTM3U'):raise ValueError('não é lista M3U')
+            for title,a,u,opts in parse_m3u(body):
+             count+=1; n=norm(title); g=norm(a.get('group-title','')); tid=a.get('tvg-id',''); lang=norm(a.get('tvg-language',''))
+             hits=[k for k in WATCH if k in n]; relevant=bool(hits or any(k in n for k in KEYS) or any(k in g for k in ('animation','animacao','anime','cartoon','desenho')) or tag=='animation')
+             if not relevant or any(k in n+' '+g for k in BLOCK):continue
+             pt=tag in ('br','pt') or tid.lower().endswith(('.br','.pt')) or any(k in lang for k in ('portugu','por','pt-br'))
+             score=100*pt+30*bool(hits)+10*bool(any(k in n for k in KEYS))-80*bool(any(k in n for k in LOW))
+             rows.append(dict(nome=title,id=tid,grupo=a.get('group-title',''),idioma='Português indicado pelo catálogo' if pt else 'Não confirmado',prioridade=score,alvos=hits,fonte=name,url=u,curada=curated,opcoes=opts))
+            return {'fonte':name,'total':count,'encontrados':len(rows),'status':'OK'},rows
+           except Exception as e:return {'fonte':name,'total':count,'encontrados':0,'status':type(e).__name__+': '+str(e)[:130]},[]
+          
+          def probe(r):
+           u=r['url']; n=norm(r['nome']); result=''
+           if any(k in n for k in PREMIUM) or r['alvos'] and not r['curada']:return 'ORIGEM PENDENTE - marca/título requer fonte oficial'
+           if not r['curada']:return 'ORIGEM PENDENTE - catálogo genérico sem confirmação independente'
+           if r['opcoes'] or '|' in u or not eligible(u):return 'RESTRITO OU NÃO ELEGÍVEL'
+           if '.m3u8' not in urlsplit(u).path.lower():return 'FORMATO NÃO HLS / revisão manual'
+           try:
+            final,m=get(u,350000)
+            for depth in range(3):
+             if not m.lstrip().startswith('#EXTM3U'):return 'NÃO É HLS'
+             if re.search(r'#EXT-X-(?:SESSION-)?KEY:.*METHOD=(?!NONE(?:,|$))',m):return 'PROTEGIDO - não testado'
+             if '#EXT-X-ENDLIST' in m:return 'VOD - não é canal contínuo'
+             lines=m.splitlines(); variants=[urljoin(final,lines[i+1].strip()) for i,x in enumerate(lines[:-1]) if x.startswith('#EXT-X-STREAM-INF:') and lines[i+1].strip() and not lines[i+1].startswith('#')]
+             if variants:final,m=get(variants[0],350000);continue
+             if '#EXTINF:' not in m:return 'HLS SEM SEGMENTOS'
+             # Verifica o manifesto, sem baixar mídia nem contornar restrições.
+             return 'HLS AO VIVO ACESSÍVEL - vídeo, idioma, Brasil e direitos pendentes'
+            return 'VARIANTES HLS DEMAIS'
+           except Exception as e:return 'FALHA HLS: '+type(e).__name__+' '+str(e)[:100]
+          
+          def main():
+           with concurrent.futures.ThreadPoolExecutor(max_workers=5) as ex: data=list(ex.map(collect,SOURCES))
+           sources=[x[0] for x in data]; merged={}
+           for _,rows in data:
+            for r in rows:
+             key=r['url']; old=merged.get(key)
+             if old:
+              old['fontes'].append(r['fonte']);old['curada']|=r['curada'];old['opcoes']|=r['opcoes']
+              if r['prioridade']>old['prioridade']:
+               for k in ('nome','id','grupo','idioma','prioridade','alvos'):old[k]=r[k]
+             else:r['fontes']=[r['fonte']];merged[key]=r
+           rows=sorted(merged.values(),key=lambda x:(-x['prioridade'],x['nome']))
+           # Preserva a lista existente: checkout somente leitura e exclusão de duplicatas por nome/URL.
+           existing=json.loads(Path('canais.json').read_text(encoding='utf-8-sig')); existing=existing.get('channels',[]) if isinstance(existing,dict) else existing
+           names={norm(x.get('name',x.get('nome',''))) for x in existing}; urls={x.get('url','') for x in existing}
+           todo=[]
+           for r in rows:
+            if norm(r['nome']) in names or r['url'] in urls:r['resultado']='JÁ EXISTE - manter atual'
+            elif not r['curada']:r['resultado']='ORIGEM PENDENTE - somente catálogo'
+            elif len(todo)<35:todo.append(r)
+            else:r['resultado']='PENDENTE - limite de testes desta execução'
+           with concurrent.futures.ThreadPoolExecutor(max_workers=8) as ex:
+            for r,s in zip(todo,ex.map(probe,todo)):r['resultado']=s
+           # Não publica URLs de origem incerta; todos os candidatos precisam de validação antes de inclusão.
+           report=[{k:v for k,v in r.items() if k not in ('url','opcoes','fonte','curada')}|{'dominio':urlsplit(r['url']).hostname or '', 'url_candidata':r['url'] if r['resultado'].startswith('HLS AO VIVO') else ''} for r in rows]
+           (OUT/'relatorio.json').write_text(json.dumps({'fontes':sources,'candidatos':report},ensure_ascii=False,indent=2),encoding='utf-8')
+           with (OUT/'candidatos.csv').open('w',encoding='utf-8-sig',newline='') as f:
+            fields=['nome','idioma','prioridade','grupo','alvos','fontes','dominio','resultado','url_candidata']; w=csv.DictWriter(f,fieldnames=fields,extrasaction='ignore',delimiter=';');w.writeheader();w.writerows(report)
+           for s in sources:print(s['fonte'],'|',s['status'],'| entradas',s['total'],'| filtradas',s['encontrados'])
+           for r in report[:100]:print(r['nome'],'|',r['idioma'],'|',r['resultado'])
+           passed=sum(r['resultado'].startswith('HLS AO VIVO') for r in report)
+           summary=f'Fontes: {len(sources)} | Listas acessíveis: {sum(s["status"]=="OK" for s in sources)} | Entradas lidas: {sum(s["total"] for s in sources)} | Candidatos únicos: {len(report)} | Manifestos HLS ao vivo: {passed} | Canais atuais: {len(existing)}'
+           print(summary); (OUT/'LEIA-ME.txt').write_text(summary+'\nSem Pluto TV, login, contorno de proteção ou alteração de canais. Catálogo público não prova autorização de integração. Teste de manifesto não prova reprodução, dublagem ou disponibilidade no Brasil.\n',encoding='utf-8')
+          if __name__=='__main__':main()
+          PYCODE
+      - name: Salvar relatorio V5
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: RAF-TV-FACIL-Relatorio-Desenhos-V5
+          path: resultado/
+          if-no-files-found: error
