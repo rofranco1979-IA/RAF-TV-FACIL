@@ -1,0 +1,145 @@
+name: RAF TV FACIL - Buscar desenhos e animes V4
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  buscar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Instalar dependencias
+        run: |
+          python -m pip install requests beautifulsoup4
+          command -v ffprobe || (sudo apt-get update && sudo apt-get install -y ffmpeg)
+      - name: Consultar novas fontes oficiais
+        shell: bash
+        run: |
+          python - <<'PY'
+          import concurrent.futures, csv, html, json, re, subprocess
+          from pathlib import Path
+          from urllib.parse import urljoin, urlsplit
+          import requests
+          from bs4 import BeautifulSoup
+          
+          OUT=Path('resultado'); OUT.mkdir(exist_ok=True)
+          # Apenas páginas próprias das emissoras/distribuidoras. Páginas de catálogo não são usadas para extrair vídeo.
+          SOURCES=[
+           ('Geekdot','https://geekdot.live/noar/','PT-BR; animes e cultura geek','live'),
+           ('Geekdot - catálogo','https://geekdot.live/','PT-BR; verificar atrações','catalogo'),
+           ('Geekdot - distribuição','https://geekdot.live/como-assistir/','PT-BR; verificar parceiros e contato','catalogo'),
+           ('Lost Cartoon Treasures','https://vidiyo.com/watch/toon-vault','Clássicos; idioma a confirmar; domínio público declarado pela plataforma','live'),
+           ('Saturday Morning','https://starlitetv.com/channel/cartoon','Clássicos; idioma a confirmar','live'),
+           ('SATO+','https://sato.tv.br/sobre/','Distribuidora oficial; FAST e animes; verificar parceria','catalogo'),
+           ("It's Anime",'https://its-anime.com/','Canal FAST oficial; disponibilidade BR e integração a confirmar','catalogo'),
+           ('Cultura - Antimatéria','https://culturaplay.tvcultura.com.br/channels/213','PT-BR; TV Cultura já está na lista atual','catalogo'),
+           ('TV Brasil','https://tvbrasil.ebc.com.br/','PT-BR; emissora já está na lista atual','catalogo'),
+          ]
+          WATCH=['ThunderCats','Thundercats','Caverna do Dragão','He-Man','She-Ra','SilverHawks','Transformers','Tartarugas Ninja','Cavaleiros do Zodíaco','Dragon Ball','One Piece','Naruto','X-Men','Tom e Jerry','Flintstones','Papa-Léguas','Pantera Cor-de-Rosa','Pica-Pau','Scooby-Doo','Bob Esponja','Pokémon','Popeye','Betty Boop','Felix the Cat','Yu Yu Hakusho','Fullmetal Alchemist','Jaspion','Jiraiya']
+          UA={'User-Agent':'RAF-TV-FACIL-Public-Compatibility/4.0'}
+          PAT=re.compile(r'https://[^\s<>"\'\\]+?\.m3u8(?:\?[^\s<>"\'\\]*)?',re.I)
+          
+          def allowed(u):
+              p=urlsplit(u)
+              return p.scheme=='https' and bool(p.hostname) and not(p.username or p.password or p.query or p.fragment) and not any(x in p.hostname.lower() for x in ('pluto.tv','youtube.com','youtu.be','googlevideo.com','twitch.tv','ttvnw.net'))
+          
+          def read(u,cap=1100000):
+              # Sem autenticação, cookies, cabeçalhos de origem falsos ou contorno de bloqueio.
+              for _ in range(5):
+                  if not allowed(u): raise ValueError('URL restrita ou não elegível')
+                  with requests.get(u,headers=UA,timeout=(5,10),stream=True,allow_redirects=False) as r:
+                      if r.is_redirect:
+                          u=urljoin(u,r.headers['Location']); continue
+                      r.raise_for_status(); data=bytearray()
+                      for chunk in r.iter_content(16384):
+                          data.extend(chunk)
+                          if len(data)>=cap: break
+                      return u,bytes(data[:cap]).decode('utf-8','replace')
+              raise ValueError('excesso de redirecionamentos')
+          
+          def check_manifest(u):
+              u,m=read(u,250000)
+              if not m.lstrip().startswith('#EXTM3U'): raise ValueError('não é HLS')
+              if re.search(r'#EXT-X-(?:SESSION-)?KEY:.*METHOD=(?!NONE(?:,|$))',m): raise ValueError('proteção detectada; não testada')
+              if '#EXT-X-ENDLIST' in m or '#EXT-X-PLAYLIST-TYPE:VOD' in m: raise ValueError('sob demanda ou encerrado')
+              return u,m
+          
+          def probe(u):
+              out={'url':u,'resultado':'','codecs':[],'idiomas_declarados':[]}
+              try:
+                  final,m=check_manifest(u)
+                  out['idiomas_declarados']=sorted(set(re.findall(r'LANGUAGE="([^"]+)"',m)))
+                  variants=[]; pending=False
+                  for ln in m.splitlines():
+                      ln=ln.strip()
+                      if ln.startswith('#EXT-X-STREAM-INF:'): pending=True
+                      elif pending and ln and not ln.startswith('#'):
+                          variants.append(urljoin(final,ln)); pending=False
+                  target=final
+                  if variants: target,m=check_manifest(variants[0])
+                  for ln in m.splitlines():
+                      ln=ln.strip()
+                      if ln and not ln.startswith('#') and not allowed(urljoin(target,ln)):
+                          raise ValueError('segmento restrito; não testado')
+                  for uri in re.findall(r'URI="([^"]+)"',m):
+                      if not allowed(urljoin(target,uri)): raise ValueError('recurso restrito; não testado')
+                  p=subprocess.run(['ffprobe','-v','error','-rw_timeout','8000000','-analyzeduration','2500000','-probesize','2500000','-show_entries','stream=codec_type,codec_name:stream_tags=language','-of','json',target],capture_output=True,text=True,timeout=20)
+                  streams=json.loads(p.stdout or '{}').get('streams',[])
+                  out['codecs']=sorted({s['codec_name'] for s in streams if s.get('codec_name')})
+                  out['idiomas_declarados']=sorted(set(out['idiomas_declarados']+[s['tags']['language'] for s in streams if s.get('tags',{}).get('language')]))
+                  out['resultado']='VÍDEO HLS CANDIDATO - identidade, idioma, região e autorização pendentes' if p.returncode==0 and any(s.get('codec_type')=='video' for s in streams) else 'HLS acessível; vídeo não confirmado'
+              except Exception as e: out['resultado']=str(e)[:180]
+              return out
+          
+          def inspect(item):
+              name,page,note,mode=item
+              row={'canal':name,'pagina':page,'origem':note,'modo':mode,'resultado':'','titulos_mencionados':[],'sinais':[]}
+              try:
+                  base,body=read(page); soup=BeautifulSoup(body,'html.parser')
+                  plain=soup.get_text(' ',strip=True)
+                  row['titulos_mencionados']=sorted({x for x in WATCH if x.casefold() in plain.casefold()},key=str.casefold)
+                  if mode!='live':
+                      row['resultado']='CATÁLOGO OFICIAL - verificar distribuição/parceria; sem coleta de vídeo'; return row
+                  # Somente manifesto divulgado no documento público ou iframe da própria origem.
+                  docs=[(base,body)]
+                  for tag in soup.select('iframe[src]')[:6]:
+                      u=urljoin(base,tag['src'])
+                      if allowed(u) and urlsplit(u).hostname==urlsplit(base).hostname:
+                          try: docs.append(read(u,500000))
+                          except Exception: pass
+                  found=set()
+                  for origin,doc in docs:
+                      doc=html.unescape(doc.replace('\\/','/').replace('\\u0026','&'))
+                      found.update(u.rstrip(');,]') for u in PAT.findall(doc))
+                      for tag in BeautifulSoup(doc,'html.parser').select('video[src], source[src]'):
+                          u=urljoin(origin,tag['src'])
+                          if urlsplit(u).path.lower().endswith('.m3u8'): found.add(u)
+                  row['sinais']=[probe(u) for u in sorted(found)[:6] if allowed(u)]
+                  row['resultado']='REVISAR CANDIDATOS' if row['sinais'] else 'SEM HLS DIRETO PÚBLICO IDENTIFICADO'
+              except Exception as e: row['resultado']='Falha na consulta: '+str(e)[:180]
+              return row
+          
+          with concurrent.futures.ThreadPoolExecutor(max_workers=4) as ex: rows=list(ex.map(inspect,SOURCES))
+          (OUT/'relatorio-desenhos-v4.json').write_text(json.dumps(rows,ensure_ascii=False,indent=2),encoding='utf-8')
+          with (OUT/'relatorio-desenhos-v4.csv').open('w',encoding='utf-8-sig',newline='') as f:
+              w=csv.writer(f,delimiter=';'); w.writerow(['Canal','Página','Origem','Resultado','URL pública','Codecs','Idiomas declarados','Títulos mencionados'])
+              for r in rows:
+                  print(r['canal']+' | '+r['resultado'])
+                  for s in r['sinais'] or [{'url':'','resultado':r['resultado'],'codecs':[],'idiomas_declarados':[]}]:
+                      w.writerow([r['canal'],r['pagina'],r['origem'],s['resultado'],s['url'],','.join(s['codecs']),','.join(s['idiomas_declarados']),', '.join(r['titulos_mencionados'])])
+                      if s['url']: print('  '+s['resultado']+' | '+','.join(s['codecs'])+' | idiomas: '+(','.join(s['idiomas_declarados']) or 'não informados'))
+          count=len({s['url'] for r in rows for s in r['sinais'] if s['resultado'].startswith('VÍDEO HLS CANDIDATO')})
+          summary=f'Páginas consultadas: {len(rows)} | Páginas de vídeo: {sum(r["modo"]=="live" for r in rows)} | Candidatos HLS únicos: {count}'
+          print(summary)
+          (OUT/'LEIA-ME.txt').write_text(summary+'\nNenhum APK ou canal alterado. Sem Pluto TV, login ou contorno de proteção. Candidato técnico não comprova identidade do conteúdo, idioma, direitos de integração ou funcionamento no Brasil. Catálogos oficiais são apenas pistas para parceria.\n',encoding='utf-8')
+          PY
+      - name: Salvar relatorio
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: RAF-TV-FACIL-Relatorio-Desenhos-V4
+          path: resultado/
+          if-no-files-found: error
