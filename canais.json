@@ -199,6 +199,195 @@
       "name": "TV Terceiro Anjo",
       "url": "https://streamer1.streamhost.org/salive/GMI3anjoh/playlist.m3u8",
       "category": "Religiosos"
+    },
+    {
+      "name": "Alpha FM 101.7 — São Paulo",
+      "url": "https://playerservices.streamtheworld.com/api/livestream-redirect/RADIO_ALPHAFM_ADP.aac",
+      "category": "Rádios on-line",
+      "format": "audio"
+    },
+    {
+      "name": "Saudade FM 99.7",
+      "url": "https://playerservices.streamtheworld.com/api/livestream-redirect/SAUDADE_FMAAC.aac",
+      "category": "Rádios on-line",
+      "format": "audio"
+    },
+    {
+      "name": "Jovem Pan — Campinas",
+      "url": "https://ssl.srvstm.com:6808/;",
+      "category": "Rádios on-line",
+      "format": "audio",
+      "logo": "https://jovempannewscampinas.com.br/wp-content/uploads/2020/10/JP-CAMPINAS-Logo-site-4.png"
+    },
+    {
+      "name": "Band FM Triângulo",
+      "url": "https://stm28.xcast.com.br:11364/stream",
+      "category": "Rádios on-line",
+      "format": "audio"
+    },
+    {
+      "name": "BandNews FM — São Paulo",
+      "url": "https://playerservices.streamtheworld.com/api/livestream-redirect/BANDNEWSFM_SPAAC.m3u8",
+      "category": "Rádios on-line",
+      "format": "hls"
+    },
+    {
+      "name": "CBN — São Paulo",
+      "url": "https://playerservices.streamtheworld.com/api/livestream-redirect/CBN_SPAAC.aac",
+      "category": "Rádios on-line",
+      "format": "audio"
+    },
+    {
+      "name": "CBN — Campinas",
+      "url": "https://8214.brasilstream.com.br/stream",
+      "category": "Rádios on-line",
+      "format": "audio"
+    },
+    {
+      "name": "Nativa FM 95.3 — São Paulo",
+      "url": "https://playerservices.streamtheworld.com/api/livestream-redirect/NATIVA_SPAAC.m3u8",
+      "category": "Rádios on-line",
+      "format": "hls"
+    },
+    {
+      "name": "Rádio Disney 91.3",
+      "url": "https://playerservices.streamtheworld.com/api/livestream-redirect/DISNEY_BRA_SP_ADP.aac",
+      "category": "Rádios on-line",
+      "format": "audio"
+    },
+    {
+      "name": "Rádio Nacional — São Paulo",
+      "url": "https://radionacionalfmsp-stream.ebc.com.br/ebc/radionacionalfmsp/playlist.m3u8",
+      "category": "Rádios on-line",
+      "format": "hls"
+    },
+    {
+      "name": "Rádio MEC FM",
+      "url": "https://radiomecfm-stream.ebc.com.br/ebc/radiomecfm/MEC_FM-mp4a_277200_eng=20000.m3u8",
+      "category": "Rádios on-line",
+      "format": "hls"
+    },
+    {
+      "name": "Geração Sertanejo Universitário",
+      "url": "https://stream.geracaoradios.com.br/listen/sertanejouniversitario/radio",
+      "category": "Rádios por ritmo",
+      "format": "audio"
+    },
+    {
+      "name": "Rádio Café Modão",
+      "url": "https://stm22.xcast.com.br:8866/",
+      "category": "Rádios por ritmo",
+      "format": "audio",
+      "logo": "https://radiocafeviola.com.br/images/radio-cafe-modao.png"
+    },
+    {
+      "name": "Rádio Tok — Sertanejo",
+      "url": "https://cast2.hoost.com.br:20088/stream",
+      "category": "Rádios por ritmo",
+      "format": "audio"
+    },
+    {
+      "name": "MGT Love Hits",
+      "url": "https://cast.mgtradio.net/radio/8010/aac",
+      "category": "Rádios por ritmo",
+      "format": "audio"
+    },
+    {
+      "name": "MGT Brasil Hits",
+      "url": "https://cast.mgtradio.net/radio/8030/aac",
+      "category": "Rádios por ritmo",
+      "format": "audio"
+    },
+    {
+      "name": "MGT Forró",
+      "url": "https://cast.mgtradio.net/radio/8050/aac",
+      "category": "Rádios por ritmo",
+      "format": "audio"
+    },
+    {
+      "name": "MGT Rock",
+      "url": "https://cast.mgtradio.net/radio/8090/aac",
+      "category": "Rádios por ritmo",
+      "format": "audio"
+    },
+    {
+      "name": "MGT Gospel",
+      "url": "https://cast.mgtradio.net/radio/8040/aac",
+      "category": "Rádios por ritmo",
+      "format": "audio"
+    },
+    {
+      "name": "MGT Light",
+      "url": "https://cast.mgtradio.net/radio/8070/aac",
+      "category": "Rádios por ritmo",
+      "format": "audio"
+    },
+    {
+      "name": "MGT Dance Hits",
+      "url": "https://cast.mgtradio.net/radio/8080/aac",
+      "category": "Rádios por ritmo",
+      "format": "audio"
+    },
+    {
+      "name": "MGT Country",
+      "url": "https://cast.mgtradio.net/radio/8110/aac",
+      "category": "Rádios por ritmo",
+      "format": "audio"
+    },
+    {
+      "name": "Studio94 Flashback",
+      "url": "https://s2.tgastream.com.br:17697/stream",
+      "category": "Rádios por ritmo",
+      "format": "audio"
+    },
+    {
+      "name": "Hunter FM — Pagode",
+      "url": "https://live.hunter.fm/pagode_normal",
+      "category": "Rádios por ritmo",
+      "format": "audio",
+      "logo": "https://hunter.fm/_nuxt/icons/icon_64x64.5c2fd0.png"
+    },
+    {
+      "name": "Geração Samba e Pagode",
+      "url": "https://stream.geracaoradios.com.br/listen/samba/radio",
+      "category": "Rádios por ritmo",
+      "format": "audio"
+    },
+    {
+      "name": "Rádio Só MPB",
+      "url": "https://s27.maxcast.com.br:8103/live",
+      "category": "Rádios por ritmo",
+      "format": "audio"
+    },
+    {
+      "name": "Rádio Scalla Instrumental",
+      "url": "https://s01.svrdedicado.org:6782/stream",
+      "category": "Rádios por ritmo",
+      "format": "audio"
+    },
+    {
+      "name": "Radio Paradise",
+      "url": "https://stream.radioparadise.com/mp3-128",
+      "category": "Rádios por ritmo",
+      "format": "audio"
+    },
+    {
+      "name": "+MaisUm",
+      "url": "https://stream.ichibansys.com:3230/hybrid/play.m3u8",
+      "category": "Shows e músicas",
+      "format": "hls"
+    },
+    {
+      "name": "Lamore Rock Show WebTV",
+      "url": "https://a.cdni.live/rodrigo2364/rodrigo2364/playlist.m3u8",
+      "category": "Shows e músicas",
+      "format": "hls"
+    },
+    {
+      "name": "TV Cajui Web",
+      "url": "https://cdn.live.br1.jmvstream.com/webtv/tvcajui/playlist/playlist.m3u8",
+      "category": "Shows e músicas",
+      "format": "hls"
     }
   ]
 }
