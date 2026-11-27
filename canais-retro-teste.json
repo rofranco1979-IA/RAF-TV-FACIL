@@ -1,0 +1,399 @@
+{
+  "channels": [
+    {
+      "name": "SBT Interior",
+      "url": "https://cdn.jmvstream.com/w/LVW-10801/LVW10801_Xvg4R0u57n/playlist.m3u8",
+      "category": "TV aberta"
+    },
+    {
+      "name": "TV Cultura",
+      "url": "https://player-tvcultura.stream.uol.com.br/live/tvcultura.m3u8",
+      "category": "TV aberta"
+    },
+    {
+      "name": "Record News",
+      "url": "https://rnw-rn.otteravision.com/rnw/rn/rnw_rn.m3u8",
+      "category": "Notícias"
+    },
+    {
+      "name": "SBT News",
+      "url": "https://dai.google.com/linear/hls/event/1XSOdtQ0SH2G8OEmEfGgjQ/master.m3u8",
+      "category": "Notícias"
+    },
+    {
+      "name": "Rede Brasil de Televisão",
+      "url": "https://redebrasil.nuvemplay.live/hls/stream.m3u8",
+      "category": "TV aberta"
+    },
+    {
+      "name": "TV Câmara",
+      "url": "https://stream3.camara.gov.br/tv1/manifest.m3u8",
+      "category": "Públicos e educativos"
+    },
+    {
+      "name": "TV Brasil",
+      "url": "https://tvbrasil-stream.ebc.com.br/index.m3u8",
+      "category": "Públicos e educativos"
+    },
+    {
+      "name": "Canal Gov",
+      "url": "https://canalgov-stream.ebc.com.br/index.m3u8",
+      "category": "Públicos e educativos"
+    },
+    {
+      "name": "Canal Educação",
+      "url": "https://canaleducacao-stream.ebc.com.br/index.m3u8",
+      "category": "Públicos e educativos"
+    },
+    {
+      "name": "Rede Minas",
+      "url": "https://8hzcavccys.zoeweb.tv/redeminas/ngrp:redeminas_all/playlist.m3u8",
+      "category": "Públicos e educativos"
+    },
+    {
+      "name": "SBT Rio",
+      "url": "https://sbt.cdnsimba.com.br/bpk-tv/SBTrj/default/index.m3u8",
+      "category": "TV aberta"
+    },
+    {
+      "name": "Record",
+      "url": "https://cdn.jmvstream.com/w/LVW-10842/LVW10842_513N26MDBL/chunklist.m3u8",
+      "category": "TV aberta"
+    },
+    {
+      "name": "Rede Gospel",
+      "url": "https://redegospel-aovivo.nuvemplay.live/hls/stream.m3u8",
+      "category": "Religiosos"
+    },
+    {
+      "name": "TV Pai Eterno",
+      "url": "https://video09.logicahost.com.br/paieterno/paieterno/playlist.m3u8",
+      "category": "Religiosos"
+    },
+    {
+      "name": "TVE RS",
+      "url": "https://streaming.procergs.com.br:8443/tve/stve/playlist.m3u8",
+      "category": "Públicos e educativos"
+    },
+    {
+      "name": "Runtime TV e Filmes",
+      "url": "https://stream.ads.ottera.tv/playlist.m3u8?network_id=2153",
+      "category": "Filmes e faroeste"
+    },
+    {
+      "name": "Runtime Ação",
+      "url": "https://stream.ads.ottera.tv/playlist.m3u8?network_id=2552",
+      "category": "Filmes e faroeste"
+    },
+    {
+      "name": "Runtime Comédia",
+      "url": "https://stream.ads.ottera.tv/playlist.m3u8?network_id=2553",
+      "category": "Filmes e faroeste"
+    },
+    {
+      "name": "Runtime Família",
+      "url": "https://stream.ads.ottera.tv/playlist.m3u8?network_id=5589",
+      "category": "Filmes e faroeste"
+    },
+    {
+      "name": "Runtime Romance",
+      "url": "https://stream.ads.ottera.tv/playlist.m3u8?network_id=4866",
+      "category": "Filmes e faroeste"
+    },
+    {
+      "name": "Toon Goggles Brasil",
+      "url": "https://stream-us-east-1.getpublica.com/playlist.m3u8?network_id=5442",
+      "category": "Desenhos"
+    },
+    {
+      "name": "RedeTV! Mais",
+      "url": "https://cdn.live.br1.jmvstream.com/webtv/AVJ-15235/playlist/playlist.m3u8",
+      "category": "TV aberta"
+    },
+    {
+      "name": "RedeTV! Paraná",
+      "url": "https://tv01.zas.media:1936/redetvparana/redetvparana/playlist.m3u8",
+      "category": "TV aberta"
+    },
+    {
+      "name": "Canal 25 Jundiaí",
+      "url": "https://stream01.msolutionbrasil.com.br/hls/canal25/live.m3u8",
+      "category": "TV aberta"
+    },
+    {
+      "name": "AWTV",
+      "url": "https://awtv.nuvemplay.live/hls/stream.m3u8",
+      "category": "Filmes e faroeste"
+    },
+    {
+      "name": "Cultura FAST",
+      "url": "https://fpa-gateway.tvcultura.com.br:8181/memfs/606caef0-a290-413d-9f1f-8fcdb3a73831.m3u8",
+      "category": "Públicos e educativos"
+    },
+    {
+      "name": "TV UFOP",
+      "url": "https://app.tvufop.com.br/hls/tvufop.m3u8",
+      "category": "Públicos e educativos"
+    },
+    {
+      "name": "TV Brasil Internacional",
+      "url": "https://tvbrasilinternacional-stream.ebc.com.br/index.m3u8",
+      "category": "TV aberta"
+    },
+    {
+      "name": "Canal UOL",
+      "url": "https://video24.mais.uol.com.br/live/6146.m3u8",
+      "category": "Notícias"
+    },
+    {
+      "name": "Amazon Sat",
+      "url": "https://amazonsat.brasilstream.com.br/hls/amazonsat/index.m3u8",
+      "category": "TV aberta"
+    },
+    {
+      "name": "TV Comunitária DF",
+      "url": "https://5b7f3c45ab7c2.streamlock.net/8008/8008/playlist.m3u8",
+      "category": "Públicos e educativos"
+    },
+    {
+      "name": "CNN Brasil",
+      "url": "https://d25usgadhphvwi.cloudfront.net/hls/main.m3u8",
+      "category": "Notícias"
+    },
+    {
+      "name": "Times Brasil (CNBC)",
+      "url": "https://ssai2-ads.api.leiniao.com/global-adinsertion-api/hls/live/v2/21fdb6dd7491406bba86497a24390a25/playlist.m3u8",
+      "category": "Notícias"
+    },
+    {
+      "name": "J3News TV",
+      "url": "https://video01.brascast.com/d92ebb4f/d92ebb4f/playlist.m3u8",
+      "category": "Notícias"
+    },
+    {
+      "name": "Classique TV",
+      "url": "https://stmv1.srvif.com/classique/classique/playlist.m3u8",
+      "category": "Filmes e faroeste"
+    },
+    {
+      "name": "MyTime Movie Network",
+      "url": "https://appletree-mytime-samsungbrazil.amagi.tv/playlist.m3u8",
+      "category": "Filmes e faroeste"
+    },
+    {
+      "name": "CINDIE TV",
+      "url": "https://cc-hqw8u5r1nshjc.akamaized.net/scheduler/scheduleMaster/352.m3u8",
+      "category": "Filmes e faroeste"
+    },
+    {
+      "name": "Gospel Cartoon",
+      "url": "https://stmv1.srvif.com/gospelcartoon/gospelcartoon/playlist.m3u8",
+      "category": "Desenhos"
+    },
+    {
+      "name": "TV Aparecida",
+      "url": "https://cdn.jmvstream.com/w/LVW-9716/LVW9716_HbtQtezcaw/playlist.m3u8",
+      "category": "Religiosos"
+    },
+    {
+      "name": "TV Terceiro Anjo",
+      "url": "https://streamer1.streamhost.org/salive/GMI3anjoh/playlist.m3u8",
+      "category": "Religiosos"
+    },
+    {
+      "name": "Alpha FM 101.7 — São Paulo",
+      "url": "https://playerservices.streamtheworld.com/api/livestream-redirect/RADIO_ALPHAFM_ADP.aac",
+      "category": "Rádios on-line",
+      "format": "audio"
+    },
+    {
+      "name": "Saudade FM 99.7",
+      "url": "https://playerservices.streamtheworld.com/api/livestream-redirect/SAUDADE_FMAAC.aac",
+      "category": "Rádios on-line",
+      "format": "audio"
+    },
+    {
+      "name": "Jovem Pan — Campinas",
+      "url": "https://ssl.srvstm.com:6808/;",
+      "category": "Rádios on-line",
+      "format": "audio",
+      "logo": "https://jovempannewscampinas.com.br/wp-content/uploads/2020/10/JP-CAMPINAS-Logo-site-4.png"
+    },
+    {
+      "name": "Band FM Triângulo",
+      "url": "https://stm28.xcast.com.br:11364/stream",
+      "category": "Rádios on-line",
+      "format": "audio"
+    },
+    {
+      "name": "BandNews FM — São Paulo",
+      "url": "https://playerservices.streamtheworld.com/api/livestream-redirect/BANDNEWSFM_SPAAC.m3u8",
+      "category": "Rádios on-line",
+      "format": "hls"
+    },
+    {
+      "name": "CBN — São Paulo",
+      "url": "https://playerservices.streamtheworld.com/api/livestream-redirect/CBN_SPAAC.aac",
+      "category": "Rádios on-line",
+      "format": "audio"
+    },
+    {
+      "name": "CBN — Campinas",
+      "url": "https://8214.brasilstream.com.br/stream",
+      "category": "Rádios on-line",
+      "format": "audio"
+    },
+    {
+      "name": "Nativa FM 95.3 — São Paulo",
+      "url": "https://playerservices.streamtheworld.com/api/livestream-redirect/NATIVA_SPAAC.m3u8",
+      "category": "Rádios on-line",
+      "format": "hls"
+    },
+    {
+      "name": "Rádio Disney 91.3",
+      "url": "https://playerservices.streamtheworld.com/api/livestream-redirect/DISNEY_BRA_SP_ADP.aac",
+      "category": "Rádios on-line",
+      "format": "audio"
+    },
+    {
+      "name": "Rádio Nacional — São Paulo",
+      "url": "https://radionacionalfmsp-stream.ebc.com.br/ebc/radionacionalfmsp/playlist.m3u8",
+      "category": "Rádios on-line",
+      "format": "hls"
+    },
+    {
+      "name": "Rádio MEC FM",
+      "url": "https://radiomecfm-stream.ebc.com.br/ebc/radiomecfm/MEC_FM-mp4a_277200_eng=20000.m3u8",
+      "category": "Rádios on-line",
+      "format": "hls"
+    },
+    {
+      "name": "Geração Sertanejo Universitário",
+      "url": "https://stream.geracaoradios.com.br/listen/sertanejouniversitario/radio",
+      "category": "Rádios por ritmo",
+      "format": "audio"
+    },
+    {
+      "name": "Rádio Café Modão",
+      "url": "https://stm22.xcast.com.br:8866/",
+      "category": "Rádios por ritmo",
+      "format": "audio",
+      "logo": "https://radiocafeviola.com.br/images/radio-cafe-modao.png"
+    },
+    {
+      "name": "Rádio Tok — Sertanejo",
+      "url": "https://cast2.hoost.com.br:20088/stream",
+      "category": "Rádios por ritmo",
+      "format": "audio"
+    },
+    {
+      "name": "MGT Love Hits",
+      "url": "https://cast.mgtradio.net/radio/8010/aac",
+      "category": "Rádios por ritmo",
+      "format": "audio"
+    },
+    {
+      "name": "MGT Brasil Hits",
+      "url": "https://cast.mgtradio.net/radio/8030/aac",
+      "category": "Rádios por ritmo",
+      "format": "audio"
+    },
+    {
+      "name": "MGT Forró",
+      "url": "https://cast.mgtradio.net/radio/8050/aac",
+      "category": "Rádios por ritmo",
+      "format": "audio"
+    },
+    {
+      "name": "MGT Rock",
+      "url": "https://cast.mgtradio.net/radio/8090/aac",
+      "category": "Rádios por ritmo",
+      "format": "audio"
+    },
+    {
+      "name": "MGT Gospel",
+      "url": "https://cast.mgtradio.net/radio/8040/aac",
+      "category": "Rádios por ritmo",
+      "format": "audio"
+    },
+    {
+      "name": "MGT Light",
+      "url": "https://cast.mgtradio.net/radio/8070/aac",
+      "category": "Rádios por ritmo",
+      "format": "audio"
+    },
+    {
+      "name": "MGT Dance Hits",
+      "url": "https://cast.mgtradio.net/radio/8080/aac",
+      "category": "Rádios por ritmo",
+      "format": "audio"
+    },
+    {
+      "name": "MGT Country",
+      "url": "https://cast.mgtradio.net/radio/8110/aac",
+      "category": "Rádios por ritmo",
+      "format": "audio"
+    },
+    {
+      "name": "Studio94 Flashback",
+      "url": "https://s2.tgastream.com.br:17697/stream",
+      "category": "Rádios por ritmo",
+      "format": "audio"
+    },
+    {
+      "name": "Hunter FM — Pagode",
+      "url": "https://live.hunter.fm/pagode_normal",
+      "category": "Rádios por ritmo",
+      "format": "audio",
+      "logo": "https://hunter.fm/_nuxt/icons/icon_64x64.5c2fd0.png"
+    },
+    {
+      "name": "Geração Samba e Pagode",
+      "url": "https://stream.geracaoradios.com.br/listen/samba/radio",
+      "category": "Rádios por ritmo",
+      "format": "audio"
+    },
+    {
+      "name": "Rádio Só MPB",
+      "url": "https://s27.maxcast.com.br:8103/live",
+      "category": "Rádios por ritmo",
+      "format": "audio"
+    },
+    {
+      "name": "Rádio Scalla Instrumental",
+      "url": "https://s01.svrdedicado.org:6782/stream",
+      "category": "Rádios por ritmo",
+      "format": "audio"
+    },
+    {
+      "name": "Radio Paradise",
+      "url": "https://stream.radioparadise.com/mp3-128",
+      "category": "Rádios por ritmo",
+      "format": "audio"
+    },
+    {
+      "name": "+MaisUm",
+      "url": "https://stream.ichibansys.com:3230/hybrid/play.m3u8",
+      "category": "Shows e músicas",
+      "format": "hls"
+    },
+    {
+      "name": "Lamore Rock Show WebTV",
+      "url": "https://a.cdni.live/rodrigo2364/rodrigo2364/playlist.m3u8",
+      "category": "Shows e músicas",
+      "format": "hls"
+    },
+    {
+      "name": "TV Cajui Web",
+      "url": "https://cdn.live.br1.jmvstream.com/webtv/tvcajui/playlist/playlist.m3u8",
+      "category": "Shows e músicas",
+      "format": "hls"
+    },
+    {
+      "name": "RetroStrange TV",
+      "url": "https://live.retrostrange.com/hls/stream.m3u8",
+      "category": "Filmes e faroeste",
+      "format": "hls"
+    }
+  ]
+}
