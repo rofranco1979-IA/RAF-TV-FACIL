@@ -1,0 +1,609 @@
+name: RAF TV FACIL V1.5 - Gerar APK
+'on':
+  workflow_dispatch: {}
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-java@v4
+      with:
+        distribution: temurin
+        java-version: '17'
+    - uses: gradle/actions/setup-gradle@v4
+      with:
+        gradle-version: '8.9'
+    - name: Criar projeto independente
+      shell: bash
+      run: |
+        set -eu
+        mkdir -p raf-tv-facil
+        cd raf-tv-facil
+        mkdir -p '.'
+        cat > 'settings.gradle' <<'RAF_FILE_0'
+        pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
+        dependencyResolutionManagement { repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS); repositories { google(); mavenCentral() } }
+        rootProject.name = 'RAF-TV-FACIL'
+        include ':app'
+        RAF_FILE_0
+        mkdir -p '.'
+        cat > 'build.gradle' <<'RAF_FILE_1'
+        plugins { id 'com.android.application' version '8.7.3' apply false }
+        RAF_FILE_1
+        mkdir -p '.'
+        cat > 'gradle.properties' <<'RAF_FILE_2'
+        android.useAndroidX=true
+        org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+        RAF_FILE_2
+        mkdir -p 'app'
+        cat > 'app/build.gradle' <<'RAF_FILE_3'
+        plugins { id 'com.android.application' }
+        android {
+         namespace 'br.com.raf.tvfacil'
+         compileSdk 35
+         defaultConfig { applicationId 'br.com.raf.tvfacil'; minSdk 23; targetSdk 34; versionCode 7; versionName '1.5' }
+         compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+        }
+        dependencies {
+         implementation 'androidx.media3:media3-exoplayer:1.4.1'
+         implementation 'androidx.media3:media3-exoplayer-hls:1.4.1'
+         implementation 'androidx.media3:media3-ui:1.4.1'
+        }
+        RAF_FILE_3
+        mkdir -p 'app/src/main'
+        cat > 'app/src/main/AndroidManifest.xml' <<'RAF_FILE_4'
+        <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+         <uses-permission android:name="android.permission.INTERNET"/>
+         <queries><package android:name="tv.pluto.android"/><package android:name="com.android.vending"/></queries>
+         <uses-feature android:name="android.software.leanback" android:required="false"/>
+         <uses-feature android:name="android.hardware.touchscreen" android:required="false"/>
+         <application android:label="RAF TV FÁCIL" android:icon="@drawable/tv_icon" android:banner="@drawable/tv_banner" android:theme="@android:style/Theme.Material.NoActionBar.Fullscreen" android:allowBackup="false" android:usesCleartextTraffic="false">
+          <activity android:name=".MainActivity" android:exported="true" android:screenOrientation="landscape" android:launchMode="singleTask">
+           <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter>
+           <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LEANBACK_LAUNCHER"/></intent-filter>
+          </activity>
+          <activity-alias android:name=".HomeTV" android:targetActivity=".MainActivity" android:exported="true" android:label="RAF TV FÁCIL">
+           <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.HOME"/><category android:name="android.intent.category.DEFAULT"/></intent-filter>
+          </activity-alias>
+         </application>
+        </manifest>
+        RAF_FILE_4
+        mkdir -p 'app/src/main/res/drawable'
+        cat > 'app/src/main/res/drawable/tv_icon.xml' <<'RAF_FILE_5'
+        <vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="96dp" android:height="96dp" android:viewportWidth="96" android:viewportHeight="96">
+        <path android:fillColor="#142C50" android:pathData="M0,0H96V96H0Z"/><path android:fillColor="#FFFFFF" android:pathData="M12,23H84V72H12Z"/><path android:fillColor="#245BC1" android:pathData="M18,29H78V66H18Z"/><path android:fillColor="#FFFFFF" android:pathData="M40,36L62,48L40,60Z M30,77H66V82H30Z"/></vector>
+        RAF_FILE_5
+        mkdir -p 'app/src/main/res/drawable'
+        cat > 'app/src/main/res/drawable/tv_banner.xml' <<'RAF_FILE_6'
+        <vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="320dp" android:height="180dp" android:viewportWidth="320" android:viewportHeight="180">
+        <path android:fillColor="#142C50" android:pathData="M0,0H320V180H0Z"/><path android:fillColor="#FFFFFF" android:pathData="M69,26H251V139H69Z M125,148H195V156H125Z"/><path android:fillColor="#245BC1" android:pathData="M79,36H241V129H79Z"/><path android:fillColor="#FFFFFF" android:pathData="M143,54L190,82L143,110Z"/></vector>
+        RAF_FILE_6
+        mkdir -p 'app/src/main/java/br/com/raf/tvfacil'
+        cat > 'app/src/main/java/br/com/raf/tvfacil/MainActivity.java' <<'RAF_FILE_7'
+        package br.com.raf.tvfacil;
+
+        import android.app.*;
+        import android.os.*;
+        import android.content.*;
+        import android.graphics.Color;
+        import android.graphics.Bitmap;
+        import android.graphics.BitmapFactory;
+        import android.graphics.Canvas;
+        import android.graphics.Paint;
+        import android.graphics.Typeface;
+        import android.graphics.drawable.BitmapDrawable;
+        import java.util.concurrent.Executors;
+        import java.util.concurrent.ExecutorService;
+        import android.graphics.drawable.GradientDrawable;
+        import android.view.*;
+        import android.widget.*;
+        import android.provider.Settings;
+        import android.net.Uri;
+        import android.text.InputType;
+        import org.json.*;
+        import java.net.URL;
+        import javax.net.ssl.HttpsURLConnection;
+        import java.io.*;
+        import java.nio.charset.StandardCharsets;
+        import java.util.ArrayList;
+        import java.util.HashSet;
+        import java.util.LinkedHashSet;
+        import androidx.media3.common.*;
+        import androidx.media3.exoplayer.ExoPlayer;
+        import androidx.media3.ui.PlayerView;
+
+        public class MainActivity extends Activity {
+            // Grade experimental, sem retransmissão própria.
+            private String[] names = {"TV Câmara", "TV Brasil", "Canal Gov", "TV Cultura"};
+            private String[] urls = {
+                "https://stream3.camara.gov.br/tv1/manifest.m3u8",
+                "https://tvbrasil-stream.ebc.com.br/index.m3u8",
+                "https://canalgov-stream.ebc.com.br/index.m3u8",
+                "https://player-tvcultura.stream.uol.com.br/live/tvcultura.m3u8"
+            };
+            private static final String DEFAULT_LIST = "https://raw.githubusercontent.com/rofranco1979-IA/RAF-TV-FACIL/main/canais.json";
+            private static final int[] TILE_COLORS={0xFF294F78,0xFF276047,0xFF46517B,0xFF63512E,0xFF385D68,0xFF51446E};
+            private int index = 0, attempts = 0, refreshGeneration = 0;
+            private String[] categories = {"Públicos e educativos", "Públicos e educativos", "Públicos e educativos", "TV aberta"};
+            private String[][] alternatives = new String[4][];
+            private String[] formats = {"hls","hls","hls","hls"};
+            private String[] logos = {"","","",""};
+            private LinearLayout radioPanel;
+            private TextView radioName, radioTrack;
+            private ImageView radioLogo;
+            private final ExecutorService logoExecutor=Executors.newFixedThreadPool(2);
+            private final android.util.LruCache<String,Bitmap> logoCache=new android.util.LruCache<String,Bitmap>(32);
+            private interface LogoReady { void ready(Bitmap b); }
+            private boolean isRadio(){return categories[index].startsWith("Rádios") || formats[index].equals("audio");}
+            private Bitmap fallbackLogo(int ch){
+                Bitmap b=Bitmap.createBitmap(128,128,Bitmap.Config.ARGB_8888);
+                Canvas canvas=new Canvas(b);Paint paint=new Paint(Paint.ANTI_ALIAS_FLAG);
+                paint.setColor(categoryColor(categories[ch]));canvas.drawRoundRect(0,0,128,128,22,22,paint);
+                String title=displayName(names[ch]).trim();StringBuilder initials=new StringBuilder();
+                for(String word:title.split("[^\\p{L}\\p{N}]+")){
+                    if(word.isEmpty())continue;
+                    if(initials.length()==0 || !word.equalsIgnoreCase("de"))initials.append(word.substring(0,1).toUpperCase(java.util.Locale.ROOT));
+                    if(initials.length()>=2)break;
+                }
+                if(initials.length()==0)initials.append("TV");
+                paint.setColor(Color.WHITE);paint.setTypeface(Typeface.create("sans-serif",Typeface.BOLD));paint.setTextSize(52);paint.setTextAlign(Paint.Align.CENTER);
+                canvas.drawText(initials.toString(),64,64-(paint.ascent()+paint.descent())/2,paint);return b;
+            }
+            private HttpsURLConnection openLogoConnection(String url) throws IOException{
+                URL current=new URL(url);
+                for(int i=0;i<4;i++){
+                    if(!validHttps(current.toString()))throw new IOException("Logo HTTPS inválido");
+                    HttpsURLConnection conn=(HttpsURLConnection)current.openConnection();
+                    conn.setConnectTimeout(4000);conn.setReadTimeout(4000);conn.setInstanceFollowRedirects(false);
+                    int code;
+                    try{code=conn.getResponseCode();}catch(IOException e){conn.disconnect();throw e;}
+                    if(code==200)return conn;
+                    String location=conn.getHeaderField("Location");conn.disconnect();
+                    if((code==301||code==302||code==303||code==307||code==308)&&location!=null){current=new URL(current,location);continue;}
+                    throw new IOException("Logo indisponível");
+                }
+                throw new IOException("Limite de redirecionamentos");
+            }
+            private void loadLogo(String url, LogoReady done){
+                if(!validHttps(url))return;
+                Bitmap saved=logoCache.get(url);if(saved!=null){done.ready(saved);return;}
+                logoExecutor.execute(()->{
+                    try{
+                        HttpsURLConnection conn=openLogoConnection(url);
+                        byte[] bytes;
+                        try{
+                            if(conn.getResponseCode()!=200)return;
+                            try(InputStream in=conn.getInputStream();ByteArrayOutputStream out=new ByteArrayOutputStream()){
+                                byte[] buf=new byte[8192];int n;while((n=in.read(buf))!=-1){out.write(buf,0,n);if(out.size()>1048576)return;}bytes=out.toByteArray();
+                            }
+                        }finally{conn.disconnect();}
+                        BitmapFactory.Options o=new BitmapFactory.Options();o.inJustDecodeBounds=true;BitmapFactory.decodeByteArray(bytes,0,bytes.length,o);
+                        if(o.outWidth<=0||o.outHeight<=0||o.outWidth>8192||o.outHeight>8192)return;
+                        o.inSampleSize=1;while(Math.max(o.outWidth,o.outHeight)/o.inSampleSize>384)o.inSampleSize*=2;
+                        o.inJustDecodeBounds=false;Bitmap b=BitmapFactory.decodeByteArray(bytes,0,bytes.length,o);
+                        if(b!=null){logoCache.put(url,b);runOnUiThread(()->{if(!isDestroyed())done.ready(b);});}
+                    }catch(Exception ignored){}
+                });
+            }
+            private void updateRadioPanel(){
+                if(radioPanel==null)return;
+                radioPanel.setVisibility(isRadio()?View.VISIBLE:View.GONE);
+                radioName.setText(displayName(names[index]));radioTrack.setText("Rádio ao vivo");radioLogo.setImageBitmap(fallbackLogo(index));
+                final String expected=logos[index];final String channel=urls[index];
+                if(isRadio())loadLogo(expected,b->{if(urls[index].equals(channel)&&logos[index].equals(expected))radioLogo.setImageBitmap(b);});
+            }
+            private void applyButtonIcon(Button button,Bitmap b){
+                BitmapDrawable icon=new BitmapDrawable(getResources(),b);icon.setBounds(0,0,dp(40),dp(40));button.setCompoundDrawables(icon,null,null,null);button.setCompoundDrawablePadding(dp(8));
+            }
+            private void setButtonLogo(Button button,int ch){
+                applyButtonIcon(button,fallbackLogo(ch));
+                loadLogo(logos[ch],b->{if(button.isAttachedToWindow())applyButtonIcon(button,b);});
+            }
+            @Override protected void onDestroy(){logoExecutor.shutdownNow();super.onDestroy();}
+            private int sourceIndex = 0;
+            private String menuCategory = null;
+            private static final String ALL = "Todos os canais";
+            private static final String[] CATEGORY_ORDER = {"TV aberta", "Notícias", "Filmes e faroeste", "Desenhos", "Séries e comédia", "Religiosos", "Públicos e educativos", "Shows e músicas", "Rádios on-line", "Rádios por ritmo", "Outros"};
+            private static final int[] CATEGORY_COLORS = {0xFF164C91,0xFF455A64,0xFFA33131,0xFF875409,0xFF684098,0xFF176344,0xFF126478,0xFF8A416D,0xFF27685D,0xFF5C458B,0xFF39485A};
+            private String displayName(String name){
+                String[] prefixes={"TV · ","Notícias · ","Filmes · ","Desenhos · ","Séries · ","Fé · ","Públicos · "};
+                for(String prefix:prefixes)if(name.startsWith(prefix))return name.substring(prefix.length());
+                return name;
+            }
+            private String inferCategory(String raw){
+                String n=displayName(raw);
+                switch(n){
+                    case "Globo SP (teste)": return "TV aberta";
+                    case "TV TEM Sorocaba (teste)": return "TV aberta";
+                    case "SBT TVS+ Sorocaba (teste)": return "TV aberta";
+                    case "Record SP (teste)": return "TV aberta";
+                    case "SBT Interior": return "TV aberta";
+                    case "Band": return "TV aberta";
+                    case "RedeTV!": return "TV aberta";
+                    case "RedeTV! Mais": return "TV aberta";
+                    case "RedeTV! Paraná": return "TV aberta";
+                    case "TV Cultura": return "TV aberta";
+                    case "TV Gazeta": return "TV aberta";
+                    case "Rede Brasil": return "TV aberta";
+                    case "SBT RJ": return "TV aberta";
+                    case "Globo - TV Morena": return "TV aberta";
+                    case "Record": return "TV aberta";
+                    case "Record News": return "Notícias";
+                    case "SBT News": return "Notícias";
+                    case "Pluto TV Bang Bang": return "Filmes e faroeste";
+                    case "Pluto TV Cine Clássicos": return "Filmes e faroeste";
+                    case "Pluto TV Cine Trapalhões": return "Filmes e faroeste";
+                    case "Pluto TV Filmes Nacionais": return "Filmes e faroeste";
+                    case "Pluto TV Cine Família": return "Filmes e faroeste";
+                    case "Runtime TV e Filmes": return "Filmes e faroeste";
+                    case "Runtime Ação": return "Filmes e faroeste";
+                    case "Runtime Comédia": return "Filmes e faroeste";
+                    case "Runtime Família": return "Filmes e faroeste";
+                    case "Runtime Romance": return "Filmes e faroeste";
+                    case "Pluto TV Desenhos Clássicos": return "Desenhos";
+                    case "Popeye": return "Desenhos";
+                    case "Os Smurfs": return "Desenhos";
+                    case "Inspetor Bugiganga": return "Desenhos";
+                    case "Toon Goggles Brasil (teste)": return "Desenhos";
+                    case "Pluto TV Retrô": return "Séries e comédia";
+                    case "MacGyver": return "Séries e comédia";
+                    case "A Feiticeira": return "Séries e comédia";
+                    case "Mr. Bean": return "Séries e comédia";
+                    case "Rede Gospel": return "Religiosos";
+                    case "TV Evangelizar": return "Religiosos";
+                    case "TV Pai Eterno": return "Religiosos";
+                    case "TV Câmara": return "Públicos e educativos";
+                    case "TV Brasil": return "Públicos e educativos";
+                    case "TV Senado": return "Públicos e educativos";
+                    case "Canal Gov": return "Públicos e educativos";
+                    case "Canal Libras": return "Públicos e educativos";
+                    case "TV Câmara 2": return "Públicos e educativos";
+                    case "Canal Educação": return "Públicos e educativos";
+                    case "Canal Saúde": return "Públicos e educativos";
+                    case "Rede Minas": return "Públicos e educativos";
+                    case "TVE RS": return "Públicos e educativos";
+                    case "Globo SP": return "TV aberta";
+                    case "TV TEM Sorocaba": return "TV aberta";
+                    case "SBT TVS+ Sorocaba": return "TV aberta";
+                    case "Record SP": return "TV aberta";
+                    case "Grjngo - Faroeste (teste)": return "Filmes e faroeste";
+                    case "Retro Cartoon (teste)": return "Desenhos";
+                    case "Series Classic (teste)": return "Séries e comédia";
+                    default: return "Outros";
+                }
+            }
+            private String validCategory(String value,String name){
+                for(String c:CATEGORY_ORDER)if(c.equals(value))return c;
+                return inferCategory(name);
+            }
+            private int categoryColor(String c){for(int i=0;i<CATEGORY_ORDER.length;i++)if(CATEGORY_ORDER[i].equals(c))return CATEGORY_COLORS[i];return 0xFF39485A;}
+            private String[] sources(int i){
+                if(alternatives[i]!=null)return alternatives[i];
+                return new String[]{urls[i]};
+            }
+            private void saveLast(){getPreferences(MODE_PRIVATE).edit().putInt("last",index).putString("last_name",names[index]).putString("last_url",urls[index]).apply();}
+            private int findChannel(String name,String url,int fallback){
+                for(int i=0;i<names.length;i++)if(names[i].equals(name))return i;
+                for(int i=0;i<names.length;i++)if(displayName(names[i]).equals(displayName(name)))return i;
+                if(!url.isEmpty())for(int i=0;i<urls.length;i++)if(urls[i].equals(url))return i;
+                return Math.max(0,Math.min(names.length-1,fallback));
+            }
+            private boolean active = false;
+            private final Runnable reconnect = () -> {
+                if (active && this.player != null) startPlayback();
+            };
+            private FrameLayout root;
+            private PlayerView video;
+            private ExoPlayer player;
+            private TextView status, banner;
+            private LinearLayout panel;
+            private final Handler handler = new Handler(Looper.getMainLooper());
+            private final Runnable hideBanner = () -> { if (banner != null) banner.setVisibility(View.GONE); };
+            private final Runnable timeout = () -> { if (player != null && player.getPlaybackState() != Player.STATE_READY) scheduleRetry(); };
+            private int dp(float n) { return (int)(n * getResources().getDisplayMetrics().density + .5f); }
+            @Override public void onCreate(Bundle b) {
+                super.onCreate(b);
+                getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+                try { applyList(getPreferences(MODE_PRIVATE).getString("cached_list", "")); } catch(Exception ignored) {}
+                String lastName = getPreferences(MODE_PRIVATE).getString("last_name", "");
+                index = Math.max(0, Math.min(names.length-1, getPreferences(MODE_PRIVATE).getInt("last", 0)));
+                index=findChannel(lastName,getPreferences(MODE_PRIVATE).getString("last_url", ""),index);
+                root = new FrameLayout(this); root.setBackgroundColor(Color.BLACK);
+                video = new PlayerView(this); video.setUseController(false); video.setFocusable(false);
+                video.setOnClickListener(v -> toggleMenu());
+                root.addView(video, new FrameLayout.LayoutParams(-1,-1));
+                radioPanel=new LinearLayout(this);radioPanel.setOrientation(LinearLayout.VERTICAL);radioPanel.setGravity(Gravity.CENTER);radioPanel.setBackgroundColor(0xFF101C2E);radioPanel.setPadding(dp(20),dp(12),dp(20),dp(12));
+                radioLogo=new ImageView(this);radioLogo.setScaleType(ImageView.ScaleType.FIT_CENTER);radioPanel.addView(radioLogo,new LinearLayout.LayoutParams(dp(112),dp(112)));
+                radioName=label("",32);radioName.setGravity(Gravity.CENTER);radioPanel.addView(radioName);
+                radioTrack=label("Rádio ao vivo",22);radioTrack.setGravity(Gravity.CENTER);radioPanel.addView(radioTrack);
+                TextView radioHelp=label("↑ ↓ Trocar estação   •   OK Canais",18);radioHelp.setGravity(Gravity.CENTER);radioPanel.addView(radioHelp);
+                root.addView(radioPanel,new FrameLayout.LayoutParams(-1,-1));radioPanel.setVisibility(View.GONE);radioPanel.setOnClickListener(v->toggleMenu());
+                status = label("", 26); status.setGravity(Gravity.CENTER); status.setBackgroundColor(0xDC101C2E); status.setPadding(dp(18),dp(16),dp(18),dp(16));
+                FrameLayout.LayoutParams st = new FrameLayout.LayoutParams(-1,-2,Gravity.CENTER); st.setMargins(dp(24),0,dp(24),0);
+                root.addView(status,st); status.setVisibility(View.GONE);
+                banner = label("", 25); banner.setBackgroundColor(0xE0101C2E); banner.setPadding(dp(20),dp(16),dp(20),dp(16));
+                FrameLayout.LayoutParams bp = new FrameLayout.LayoutParams(-1,-2,Gravity.BOTTOM); root.addView(banner,bp); banner.setVisibility(View.GONE);
+                setContentView(root); immersive();
+            }
+            private TextView label(String text, int size) { TextView t = new TextView(this); t.setText(text); t.setTextSize(size); t.setTextColor(Color.WHITE); return t; }
+            private void immersive() { getWindow().getDecorView().setSystemUiVisibility(5894 | View.SYSTEM_UI_FLAG_LAYOUT_STABLE); }
+            @Override public void onWindowFocusChanged(boolean f) { super.onWindowFocusChanged(f); if(f) immersive(); }
+            @Override protected void onStart() { super.onStart(); active=true; if(player==null) {
+                player=new ExoPlayer.Builder(this).build(); video.setPlayer(player);
+                player.addListener(new Player.Listener(){
+                    @Override public void onPlaybackStateChanged(int s) {
+                        if(s==Player.STATE_READY) { handler.removeCallbacks(timeout); handler.removeCallbacks(reconnect); attempts=0; status.setVisibility(View.GONE); }
+                        else if(s==Player.STATE_BUFFERING) { showStatus("Carregando " + names[index] + "…"); handler.removeCallbacks(timeout); handler.postDelayed(timeout,20000); }
+                        else if(s==Player.STATE_ENDED) scheduleRetry();
+                    }
+                    @Override public void onPlayerError(PlaybackException e) { scheduleRetry(); }
+                    @Override public void onMediaMetadataChanged(MediaMetadata metadata){
+                        if(!isRadio()||radioTrack==null)return;
+                        String title=metadata.title==null?"":metadata.title.toString();String artist=metadata.artist==null?"":metadata.artist.toString();
+                        radioTrack.setText(title.isEmpty()?"Rádio ao vivo":artist.isEmpty()?title:artist+" — "+title);
+                    }
+                });
+                tune(index);
+                refreshList(false);
+            }}
+            @Override protected void onStop() { active=false; handler.removeCallbacksAndMessages(null); if(player!=null){video.setPlayer(null);player.release();player=null;} refreshGeneration++; super.onStop(); }
+            private void showStatus(String text){ status.setText(text);status.setVisibility(View.VISIBLE); }
+            private void tune(int n){
+                attempts=0; sourceIndex=0; handler.removeCallbacks(reconnect); handler.removeCallbacks(timeout);
+                index=(n+names.length)%names.length; saveLast();updateRadioPanel();
+                banner.setText(String.format(java.util.Locale.ROOT,"%02d   %s     •     ↑ ↓ Trocar     •     OK Canais",index+1,displayName(names[index]))); banner.setVisibility(View.VISIBLE);
+                handler.removeCallbacks(hideBanner);handler.postDelayed(hideBanner,4500);
+                startPlayback();
+            }
+            private void startPlayback(){
+                if(player==null || !active)return;
+                handler.removeCallbacks(timeout); handler.removeCallbacks(reconnect);
+                showStatus("Carregando " + names[index] + "…");
+                String url=sources(index)[sourceIndex];
+                MediaItem.Builder item=new MediaItem.Builder().setUri(url);
+                if(formats[index].equals("hls")||url.toLowerCase(java.util.Locale.ROOT).contains(".m3u8"))item.setMimeType(MimeTypes.APPLICATION_M3U8);
+                player.setMediaItem(item.build());
+                player.prepare();player.play();handler.removeCallbacks(timeout);handler.postDelayed(timeout,20000);
+            }
+            private GradientDrawable bg(int color){GradientDrawable g=new GradientDrawable();g.setColor(color);g.setCornerRadius(dp(10));return g;}
+            private Button action(String name, Runnable run){return action(name,0xFF26394F,run);}
+            private Button action(String name,int color,Runnable run){
+                Button b=new Button(this);b.setText(name);b.setAllCaps(false);b.setTextSize(23);b.setTextColor(Color.WHITE);b.setMinHeight(dp(52));b.setFocusable(true);b.setFocusableInTouchMode(true);b.setId(View.generateViewId());b.setBackground(bg(color));
+                b.setOnFocusChangeListener((v,f)->{ b.setBackground(bg(f?0xFF245BC1:color)); if(f){GradientDrawable focused=bg(0xFF245BC1);focused.setStroke(dp(3),Color.WHITE);b.setBackground(focused);} });b.setOnClickListener(v->run.run());return b;
+            }
+            private void closeMenu(){if(panel!=null){root.removeView(panel);panel=null;} menuCategory=null; immersive();}
+            private void toggleMenu(){if(panel!=null)closeMenu();else openMenu();}
+            private void openMenu(){showMenu(null);}
+            private void openPluto(){
+                final String pkg="tv.pluto.android";
+                try {
+                    Intent app=getPackageManager().getLeanbackLaunchIntentForPackage(pkg);
+                    if(app==null)app=getPackageManager().getLaunchIntentForPackage(pkg);
+                    if(app!=null){closeMenu();startActivity(app);return;}
+                }catch(Exception ignored){}
+                new AlertDialog.Builder(this).setTitle("Pluto TV oficial")
+                  .setMessage("Instale o aplicativo gratuito Pluto TV pela loja oficial ou acesse o site. Para voltar, use o botão Voltar do controle remoto.")
+                  .setNegativeButton("Voltar",null)
+                  .setNeutralButton("Abrir site",(d,w)->openPlutoSite())
+                  .setPositiveButton("Instalar",(d,w)->{
+                      try{Intent store=new Intent(Intent.ACTION_VIEW,Uri.parse("market://details?id="+pkg));store.setPackage("com.android.vending");startActivity(store);}
+                      catch(Exception ignored){openPlutoSite();}
+                  }).show();
+            }
+            private void openPlutoSite(){
+                try{startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse("https://pluto.tv/")));}
+                catch(Exception ignored){Toast.makeText(this,"Abra Pluto TV na loja do seu aparelho.",Toast.LENGTH_LONG).show();}
+            }
+            private void showMenu(String category){
+                closeMenu();menuCategory=category;
+                panel=new LinearLayout(this);panel.setOrientation(LinearLayout.VERTICAL);panel.setPadding(dp(20),dp(10),dp(20),dp(8));panel.setBackgroundColor(0xFF101C2E);panel.setClickable(true);
+                root.addView(panel,new FrameLayout.LayoutParams(-1,-1));
+                TextView title=label(category==null?"RAF TV FÁCIL — Categorias":category,27);panel.addView(title);
+                title.setOnLongClickListener(v->{installer();return true;});
+                ScrollView scroll=new ScrollView(this);
+                scroll.setFillViewport(true);scroll.setVerticalScrollBarEnabled(true);scroll.setScrollbarFadingEnabled(false);
+                scroll.setScrollBarSize(dp(12));scroll.setScrollBarStyle(View.SCROLLBARS_INSIDE_INSET);
+                if(Build.VERSION.SDK_INT>=29){
+                    GradientDrawable thumb=new GradientDrawable();thumb.setColor(0xFFBBD8FF);thumb.setCornerRadius(dp(6));thumb.setSize(dp(12),dp(30));
+                    GradientDrawable track=new GradientDrawable();track.setColor(0xFF34445C);track.setCornerRadius(dp(6));track.setSize(dp(12),dp(30));
+                    scroll.setVerticalScrollbarThumbDrawable(thumb);scroll.setVerticalScrollbarTrackDrawable(track);
+                }
+                panel.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
+                LinearLayout list=new LinearLayout(this);list.setOrientation(LinearLayout.VERTICAL);scroll.addView(list);
+                ArrayList<Button> buttons=new ArrayList<>();Button selected=null;
+                if(category==null){
+                    Button all=action(ALL+"  ("+names.length+")",0xFF39485A,()->showMenu(ALL));buttons.add(all);selected=all;
+                    for(String c:CATEGORY_ORDER){int count=0;for(String cc:categories)if(c.equals(cc))count++;if(count==0)continue;
+                        final String choice=c;
+                        Button btn=action(c+"  ("+count+")",categoryColor(c),()->showMenu(choice));buttons.add(btn);
+                        if(c.equals(categories[index]))selected=btn;
+                    }
+                    buttons.add(action("Pluto TV oficial",0xFF795600,()->openPluto()));
+                }else{
+                    for(int i=0;i<names.length;i++){
+                        if(!ALL.equals(category)&&!category.equals(categories[i]))continue;
+                        final int ch=i;Button btn=action(String.format(java.util.Locale.ROOT,"%02d   %s",i+1,displayName(names[i])),categoryColor(categories[i]),()->{closeMenu();tune(ch);});
+                        btn.setOnLongClickListener(v->{installer();return true;});buttons.add(btn);final Button logoButton=btn;btn.post(()->setButtonLogo(logoButton,ch));if(i==index)selected=btn;
+                    }
+                }
+                LinearLayout row=null;
+                for(int i=0;i<buttons.size();i++){
+                    if(i%2==0){row=new LinearLayout(this);row.setOrientation(LinearLayout.HORIZONTAL);list.addView(row,new LinearLayout.LayoutParams(-1,-2));}
+                    Button btn=buttons.get(i);btn.setTextSize(22);btn.setMinHeight(dp(68));btn.setMaxLines(2);
+                    LinearLayout.LayoutParams cell=new LinearLayout.LayoutParams(0,-2,1);cell.setMargins(dp(5),dp(4),dp(5),dp(4));row.addView(btn,cell);
+                }
+                LinearLayout footer=new LinearLayout(this);footer.setOrientation(LinearLayout.HORIZONTAL);panel.addView(footer,new LinearLayout.LayoutParams(-1,-2));
+                Button back=action(category==null?"Voltar à TV":"Categorias",()->{if(category==null)closeMenu();else openMenu();});
+                Button refresh=action("Atualizar lista",()->refreshList(true));refresh.setOnLongClickListener(v->{installer();return true;});
+                footer.addView(back,new LinearLayout.LayoutParams(0,-2,1));footer.addView(refresh,new LinearLayout.LayoutParams(0,-2,1));
+                if(selected!=null)selected.requestFocus();else if(!buttons.isEmpty())buttons.get(0).requestFocus();else back.requestFocus();
+            }
+            private void addButton(LinearLayout container,Button b){LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.setMargins(0,dp(6),0,0);container.addView(b,lp);}
+            private void scheduleRetry(){
+                handler.removeCallbacks(timeout);handler.removeCallbacks(reconnect);
+                if(!active || player==null)return;
+                if(attempts>=2){
+                    if(sourceIndex+1<sources(index).length){sourceIndex++;attempts=0;showStatus("Tentando outra fonte…");handler.postDelayed(reconnect,1500);return;}
+                    showStatus("Canal indisponível.\nUse as setas para trocar ou OK para escolher.");return;
+                }
+                int delay=3*(++attempts);
+                showStatus("Reconectando " + names[index] + "…\nAguarde ou troque de canal.");
+                handler.postDelayed(reconnect,delay*1000L);
+            }
+            private void installer(){
+                new AlertDialog.Builder(this).setTitle("Configuração do instalador")
+                    .setItems(new String[]{"Abrir TV ao ligar o aparelho","Atualizar canais agora","Endereço da lista de canais"},(d,w)->{
+                        if(w==0)setupHome();else if(w==1)refreshList(true);else editListUrl();
+                    }).setNegativeButton("Voltar",null).show();
+            }
+            private void editListUrl(){
+                EditText input=new EditText(this);input.setSingleLine(true);input.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_URI);
+                input.setText(getPreferences(MODE_PRIVATE).getString("list_url",DEFAULT_LIST));
+                new AlertDialog.Builder(this).setTitle("Lista HTTPS autorizada (JSON)").setView(input).setNegativeButton("Cancelar",null).setPositiveButton("Salvar",(d,w)->{
+                    String value=input.getText().toString().trim();
+                    if(!validHttps(value)){Toast.makeText(this,"Use um endereço HTTPS válido",Toast.LENGTH_LONG).show();return;}
+                    getPreferences(MODE_PRIVATE).edit().putString("list_url",value).apply();refreshList(true);
+                }).show();
+            }
+            private boolean validHttps(String u){try{URL parsed=new URL(u);return "https".equalsIgnoreCase(parsed.getProtocol()) && parsed.getHost()!=null&&!parsed.getHost().isEmpty()&&parsed.getUserInfo()==null;}catch(Exception e){return false;}}
+            private boolean applyList(String data) throws Exception{
+                JSONArray array=new JSONObject(data).getJSONArray("channels");
+                if(array.length()<1||array.length()>200)return false;
+                ArrayList<String> nn=new ArrayList<>(), uu=new ArrayList<>(), cc=new ArrayList<>(), ff=new ArrayList<>(), ll=new ArrayList<>();ArrayList<String[]> ss=new ArrayList<>();HashSet<String> seen=new HashSet<>();
+                for(int i=0;i<array.length();i++){
+                    JSONObject o=array.getJSONObject(i);String n=o.getString("name").trim(),u=o.getString("url").trim();
+                    if(n.isEmpty()||n.length()>60||!validHttps(u)||!seen.add(n))return false;
+                    nn.add(n);uu.add(u);String cat=validCategory(o.optString("category", ""),n);cc.add(cat);
+                    String fmt=o.optString("format",cat.startsWith("Rádios")?"audio":"hls").toLowerCase(java.util.Locale.ROOT);ff.add(fmt.equals("audio")||fmt.equals("auto")?fmt:"hls");
+                    String logo=o.optString("logo", "");ll.add(validHttps(logo)?logo:"");
+                    LinkedHashSet<String> candidates=new LinkedHashSet<>();candidates.add(u);
+                    JSONArray extra=o.optJSONArray("alternatives");
+                    if(extra!=null)for(int k=0;k<extra.length()&&candidates.size()<3;k++){String alt=extra.optString(k,"").trim();if(validHttps(alt))candidates.add(alt);}
+                    ss.add(candidates.toArray(new String[0]));
+                }
+                names=nn.toArray(new String[0]);urls=uu.toArray(new String[0]);categories=cc.toArray(new String[0]);alternatives=ss.toArray(new String[0][]);formats=ff.toArray(new String[0]);logos=ll.toArray(new String[0]);return true;
+            }
+            private void refreshList(boolean manual){
+                final int request=++refreshGeneration;
+                if(manual)Toast.makeText(this,"Atualizando lista…",Toast.LENGTH_SHORT).show();
+                final String address=getPreferences(MODE_PRIVATE).getString("list_url",DEFAULT_LIST);
+                new Thread(()->{
+                    try{
+                        if(!validHttps(address))throw new IOException();
+                        HttpsURLConnection c=(HttpsURLConnection)new URL(address).openConnection();
+                        c.setUseCaches(false);c.setRequestProperty("Cache-Control","no-cache");c.setConnectTimeout(7000);c.setReadTimeout(7000);c.setInstanceFollowRedirects(false);
+                        String data;
+                        try{
+                            if(c.getResponseCode()!=200)throw new IOException();
+                            try(InputStream in=c.getInputStream();ByteArrayOutputStream out=new ByteArrayOutputStream()){
+                                byte[] buf=new byte[4096];int count;while((count=in.read(buf))!=-1){out.write(buf,0,count);if(out.size()>262144)throw new IOException();}
+                                data=new String(out.toByteArray(),StandardCharsets.UTF_8);
+                            }
+                        }finally{c.disconnect();}
+                        runOnUiThread(()->{
+                            if(!active||request!=refreshGeneration)return;
+                            String old=names[index],oldUrl=urls[index],oldFormat=formats[index],oldCat=categories[index];String[] oldSources=sources(index);int oldIndex=index;String oldMenu=menuCategory;
+                            try{
+                                if(!applyList(data))throw new IOException();
+                                getPreferences(MODE_PRIVATE).edit().putString("cached_list",data).apply();
+                                index=findChannel(old,oldUrl,oldIndex);
+                                if(!oldUrl.equals(urls[index])||!oldFormat.equals(formats[index])||!oldCat.equals(categories[index])||!java.util.Arrays.equals(oldSources,sources(index)))tune(index);
+                                else {saveLast();updateRadioPanel();}
+                                if(panel!=null)showMenu(oldMenu);
+                                if(manual)Toast.makeText(this,"Lista atualizada: "+names.length+" canais",Toast.LENGTH_LONG).show();
+                            }catch(Exception e){if(manual)Toast.makeText(this,"Lista inválida. Mantivemos os canais anteriores.",Toast.LENGTH_LONG).show();}
+                        });
+                    }catch(Exception e){runOnUiThread(()->{if(active&&request==refreshGeneration&&manual)Toast.makeText(this,"Não foi possível atualizar. Canais anteriores mantidos.",Toast.LENGTH_LONG).show();});}
+                }).start();
+            }
+            private void setupHome(){
+                new AlertDialog.Builder(this).setTitle("Abrir a TV ao ligar")
+                  .setMessage("Se o aparelho permitir, escolha RAF TV FÁCIL como app de início (Home). Assim, a TV abrirá quando o aparelho carregar sua tela inicial. Para voltar ao menu original do aparelho, altere novamente o app de início nas configurações. Alguns TV Boxes não oferecem essa opção.")
+                  .setNegativeButton("Cancelar",null).setPositiveButton("Abrir configuração",(d,w)->{
+                      try{ startActivity(new Intent(Settings.ACTION_HOME_SETTINGS)); }
+                      catch(ActivityNotFoundException e){ try{startActivity(new Intent(Settings.ACTION_SETTINGS));}catch(Exception ignored){Toast.makeText(this,"Configuração não disponível neste aparelho",Toast.LENGTH_LONG).show();} }
+                  }).show();
+            }
+            @Override public boolean dispatchKeyEvent(KeyEvent e){
+                int k=e.getKeyCode();boolean down=e.getAction()==KeyEvent.ACTION_DOWN;
+                if(k==KeyEvent.KEYCODE_CHANNEL_UP || k==KeyEvent.KEYCODE_CHANNEL_DOWN){if(down&&e.getRepeatCount()==0){closeMenu();tune(index+(k==KeyEvent.KEYCODE_CHANNEL_UP?1:-1));}return true;}
+                if(k==KeyEvent.KEYCODE_MENU){if(down&&e.getRepeatCount()==0){if(panel==null)openMenu();else installer();}return true;}
+                if(panel==null){
+                    if(k==KeyEvent.KEYCODE_DPAD_UP||k==KeyEvent.KEYCODE_DPAD_RIGHT||k==KeyEvent.KEYCODE_DPAD_DOWN||k==KeyEvent.KEYCODE_DPAD_LEFT){if(down&&e.getRepeatCount()==0)tune(index+((k==KeyEvent.KEYCODE_DPAD_UP||k==KeyEvent.KEYCODE_DPAD_RIGHT)?1:-1));return true;}
+                    if(k==KeyEvent.KEYCODE_DPAD_CENTER||k==KeyEvent.KEYCODE_ENTER||k==KeyEvent.KEYCODE_MENU){if(down&&e.getRepeatCount()==0)openMenu();return true;}
+                }
+                return super.dispatchKeyEvent(e);
+            }
+            @Override public void onBackPressed(){if(panel!=null){if(menuCategory!=null)openMenu();else closeMenu();}else openMenu();}
+        }
+        RAF_FILE_7
+        mkdir -p '.'
+        cat > 'README.md' <<'RAF_FILE_8'
+        # RAF TV FÁCIL 1.5 — protótipo Android TV / TV Box
+        Aplicativo separado, sem cadastro, sem alteração do RAF STREAMING. Android 6+ (API 23), player HLS e áudio direto Media3.
+
+        ## Instalação de teste
+        1. Gere o APK pelo workflow manual do GitHub Actions. Baixe o artefato ZIP, extraia e instale o APK no aparelho.
+        2. Abra o aplicativo. Setas trocam canal; OK abre a lista; Voltar alterna lista e TV. Volume usa o controle do aparelho.
+        3. Para abrir automaticamente, na lista mantenha OK pressionado sobre um canal (ou MENU duas vezes, ou toque longo no título). Selecione Abrir TV ao ligar o aparelho. Selecione RAF TV FÁCIL como aplicativo de início (Home), **somente se o aparelho disponibilizar essa escolha**. Para desfazer, retorne às configurações de Home e escolha o launcher anterior. Não há bloqueio de sistema nem garantia de abertura automática em qualquer aparelho.
+
+        ## Categorias e atualização
+        OK abre categorias; escolha uma ou Todos os canais. Voltar retorna às categorias e à TV. Atualizar lista fica no rodapé; mantenha OK pressionado nesse botão para acessar o instalador. O JSON aceita category e alternatives (até dois HTTPS adicionais por canal), sem alterar o formato antigo. A troca de fonte é automática após falhas; não foram adicionados novos sinais nesta versão.
+
+        ## V1.5
+        Barra de rolagem vertical visível na grade de canais e categorias, preservando o foco e os controles. Ícones com iniciais são usados como alternativa quando não há imagem válida. Logotipos HTTPS aceitam redirecionamentos HTTPS limitados.
+
+        ## Limitações
+        Quatro entradas iniciais de contingência; a grade remota continua inalterada. Verifique a autorização individual antes de distribuir. O botão Pluto TV abre o aplicativo oficial ou a loja/site, sem incorporar o sinal ao player RAF. Não incluir espelhos desconhecidos. TV Aparecida requer autorização expressa. O campo opcional logo aceita URL HTTPS de imagem autorizada; sem logo, mantém nome e cor. Rádios usam format audio; metadata de título/artista depende da fonte. A lista remota opcional lê canais.json na raiz do repositório ao abrir; mantém cache ou lista inicial se falhar. Formato: objeto JSON com array channels contendo name e url HTTPS HLS. Até 200 entradas. Não use listas sem autorização. A TV Câmara fornece oficialmente player incorporável em https://www.camara.leg.br/tv/como-sintonizar. Verifique autorização/condições de uso de cada emissora antes de distribuir; substitua/remova fontes não aprovadas. Não há retransmissão por servidor próprio. O APK é assinado com chave persistente fornecida no segredo RAF_TV_SIGNING. Guarde uma cópia privada do segredo; nunca faça commit dele. A atualização da V1.3 usa o mesmo applicationId e a mesma chave. Não desinstale para preservar a configuração. O build falha se o segredo estiver ausente.
+        RAF_FILE_8
+    - name: Instalar SDK, compilar e assinar
+      shell: bash
+      env:
+        RAF_SIGNING_JSON: ${{ secrets.RAF_TV_SIGNING }}
+      run: |
+        set -eu
+        SDK_ROOT="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
+        SDKMANAGER="$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
+        if [ ! -x "$SDKMANAGER" ]; then
+          SDKMANAGER="$(find "$SDK_ROOT/cmdline-tools" -type f -path '*/bin/sdkmanager' | sort -V | tail -n 1)"
+        fi
+        test -x "$SDKMANAGER"
+        export ANDROID_HOME="$SDK_ROOT" ANDROID_SDK_ROOT="$SDK_ROOT"
+        # GitHub runner normally has accepted licenses; accept any remaining SDK licenses.
+        set +o pipefail
+        yes | "$SDKMANAGER" --sdk_root="$SDK_ROOT" --licenses >/dev/null
+        set -o pipefail
+        "$SDKMANAGER" --sdk_root="$SDK_ROOT" "platforms;android-35" "build-tools;35.0.0" "platform-tools"
+        cd raf-tv-facil
+        if [ -z "$RAF_SIGNING_JSON" ]; then
+          echo '::error::Cadastre o segredo RAF_TV_SIGNING nas configurações do repositório antes de executar.'
+          exit 1
+        fi
+        export RAF_KEY_FILE="$(mktemp "$RUNNER_TEMP/raf-key.XXXXXX.p12")"
+        chmod 600 "$RAF_KEY_FILE"
+        trap 'rm -f "$RAF_KEY_FILE"' EXIT
+        RAF_PASSWORD="$(python3 - <<'RAF_SIGN'
+        import json, os, base64
+        secret=json.loads(os.environ['RAF_SIGNING_JSON'])
+        with open(os.environ['RAF_KEY_FILE'],'wb') as f:
+            f.write(base64.b64decode(secret['keystore'],validate=True))
+        print(secret['password'])
+        RAF_SIGN
+        )"
+        export RAF_PASSWORD
+        echo "::add-mask::$RAF_PASSWORD"
+        unset RAF_SIGNING_JSON
+        gradle --no-daemon :app:assembleRelease
+        mkdir -p ../dist
+        "$SDK_ROOT/build-tools/35.0.0/zipalign" -P 16 -f 4 app/build/outputs/apk/release/app-release-unsigned.apk "$RUNNER_TEMP/raf-aligned.apk"
+        "$SDK_ROOT/build-tools/35.0.0/apksigner" sign --ks "$RAF_KEY_FILE" --ks-type PKCS12 --ks-key-alias raf-tv --ks-pass env:RAF_PASSWORD --key-pass env:RAF_PASSWORD --out ../dist/RAF-TV-FACIL-V1.5-Android-TV.apk "$RUNNER_TEMP/raf-aligned.apk"
+        "$SDK_ROOT/build-tools/35.0.0/apksigner" verify --verbose --print-certs ../dist/RAF-TV-FACIL-V1.5-Android-TV.apk
+        rm -f ../dist/*.idsig "$RUNNER_TEMP/raf-aligned.apk"
+    - uses: actions/upload-artifact@v4
+      with:
+        name: RAF-TV-FACIL-V1.5-Android-TV
+        path: dist/RAF-TV-FACIL-V1.5-Android-TV.apk
+        if-no-files-found: error
