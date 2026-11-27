@@ -1,0 +1,90 @@
+name: Buscar radios RAF TV FACIL V1
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  buscar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Instalar dependencias
+        run: pip install requests beautifulsoup4
+      - name: Verificar fontes oficiais
+        shell: bash
+        run: |
+          mkdir -p resultado
+          python - <<'PY'
+          import requests, re, json, csv, html, concurrent.futures
+          from bs4 import BeautifulSoup
+          from urllib.parse import urljoin, urlsplit
+          stations = [
+              ('MGT Rádios - catálogo de ritmos','https://www.mgtradio.net/'),
+              ('MGT Universitária','https://www.mgtradio.net/sertanejo'),
+              ('MGT Sertaneja','https://www.mgtradio.net/sertaneja'),
+              ('Rádio Tok','https://www.radiotok.com.br/ouca-ao-vivo/'),
+              ('Rádio Nacional','https://radionacional.ebc.com.br/'),
+              ('Rádio MEC','https://radiomec.ebc.com.br/'),
+              ('Antena 1','https://www.antena1.com.br/'),
+              ('Jovem Pan','https://jovempan.com.br/ao-vivo/'),
+              ('Radio Paradise','https://www.radioparadise.com/'),
+          ]
+          headers={'User-Agent':'RAF-TV-Facil-Compatibility-Test/1.0'}
+          media=re.compile(r'https?://[^\s<>"\'\\]+',re.I)
+          def inspect(item):
+              name, page=item
+              found=set(); errors=[]; visited=set(); queue=[(page,0)]
+              while queue and len(visited)<8:
+                  url,depth=queue.pop(0)
+                  if url in visited: continue
+                  visited.add(url)
+                  try:
+                      with requests.get(url,headers=headers,timeout=(5,10),stream=True) as r:
+                          r.raise_for_status()
+                          body=b''.join(r.iter_content(65536))[:1500000].decode('utf-8','replace') if 'content-length' in r.headers and int(r.headers.get('content-length','0') or '0')<1500000 else r.raw.read(1500000,decode_content=True).decode('utf-8','replace')
+                          base=r.url
+                      body=html.unescape(body.replace('\\/','/').replace('\\u0026','&'))
+                      soup=BeautifulSoup(body,'html.parser')
+                      for tag in soup.select('audio[src],video[src],source[src]'):
+                          found.add(urljoin(base,tag['src']))
+                      for candidate in media.findall(body):
+                          candidate=candidate.rstrip(');,]')
+                          if re.search(r'\.(m3u8|mp3|aac|ogg|opus|flac)(?:[?#]|$)',candidate,re.I): found.add(candidate)
+                      if depth==0:
+                          for tag in soup.select('iframe[src]')[:4]:
+                              u=urljoin(base,tag['src'])
+                              if u.startswith('https://') and not any(x in u for x in ('youtube.com','facebook.com','googletagmanager')): queue.append((u,1))
+                          if name.startswith('MGT Rádios'):
+                              for tag in soup.select('a[href]'):
+                                  u=urljoin(base,tag['href']); label=tag.get_text(' ',strip=True)
+                                  if 'MGT' in label and urlsplit(u).hostname==urlsplit(base).hostname and u!=base: queue.append((u,1))
+                  except Exception as e: errors.append(str(e)[:160])
+              rows=[]
+              for u in sorted(found)[:25]:
+                  if not u.startswith('https://'): continue
+                  try:
+                      with requests.get(u,headers=headers,timeout=(5,8),stream=True) as r:
+                          ct=r.headers.get('content-type','').lower(); sample=next(r.iter_content(4096),b''); status=r.status_code
+                          hls=b'#EXTM3U' in sample and (b'#EXT-X-' in sample or 'mpegurl' in ct)
+                          audio=ct.startswith('audio/') and not ('mpegurl' in ct) and not hls
+                          kind='HLS' if hls else 'AUDIO' if audio else 'OUTRO'
+                          result='CANDIDATO' if r.ok and (hls or audio) else 'NAO CONFIRMADO'
+                          if not r.url.startswith('https://'): result='REDIRECIONAMENTO HTTP'
+                          rows.append([name,page,u,status,ct,kind,result])
+                  except Exception as e: rows.append([name,page,u,'','', '',str(e)[:140]])
+              if not rows: rows.append([name,page,'','','','','SEM LINK DIRETO NO HTML; '+ '; '.join(errors)[:180]])
+              return rows
+          with concurrent.futures.ThreadPoolExecutor(max_workers=5) as ex:
+              rows=[r for group in ex.map(inspect,stations) for r in group]
+          with open('resultado/relatorio-radios.csv','w',encoding='utf-8-sig',newline='') as f:
+              w=csv.writer(f,delimiter=';'); w.writerow(['Estacao ou catalogo','Pagina oficial','URL candidata','HTTP','Content-Type','Formato','Resultado']); w.writerows(rows)
+          with open('resultado/candidatos.json','w',encoding='utf-8') as f:
+              json.dump([dict(zip(['estacao','pagina','url','http','content_type','formato','resultado'],r)) for r in rows],f,ensure_ascii=False,indent=2)
+          print('\n'.join(f'{r[0]} | {r[5]} | {r[6]}' for r in rows))
+          print('Acessibilidade nao confirma reproducao, identidade do sinal ou permissao de integracao. Nenhuma lista principal foi modificada.')
+          PY
+      - name: Salvar relatorio
+        uses: actions/upload-artifact@v4
+        with:
+          name: RAF-TV-FACIL-Relatorio-Radios
+          path: resultado/
