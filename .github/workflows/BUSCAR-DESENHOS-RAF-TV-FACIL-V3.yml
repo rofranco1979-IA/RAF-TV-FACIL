@@ -1,0 +1,133 @@
+name: RAF TV FACIL - Buscar desenhos e animes V3
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  buscar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Instalar dependencias
+        run: |
+          python -m pip install requests beautifulsoup4
+          command -v ffprobe || (sudo apt-get update && sudo apt-get install -y ffmpeg)
+      - name: Consultar fontes e testar video HLS publico
+        shell: bash
+        run: |
+          python - <<'PY'
+          import csv, json, re, html, subprocess, os, concurrent.futures
+          from urllib.parse import urljoin, urlsplit, parse_qs
+          from pathlib import Path
+          import requests
+          from bs4 import BeautifulSoup
+
+          OUT=Path('resultado'); OUT.mkdir(exist_ok=True)
+          SOURCES=[
+           ('PlayTV','https://playtv.com.br/','Emissora oficial; animes e cultura geek',True),
+           ('PlayTV','https://playtv.com.br/site/','Emissora oficial; animes e cultura geek',True),
+           ('IPGO - Anime TV / Retro Cartoon / Desenhos Clássicos','https://ipgotv.net.br/appsite/index.php/canais','Provedor listado; licenças e integração pendentes',False),
+           ('IPGO - catálogo complementar','https://ipgotv.net.br/appsite/index.php/canais-externos','Provedor listado; licenças e integração pendentes',False),
+           ('Retro TV','https://www.ketv.com.br/canal/retrotv','Catálogo de terceiros; procurar emissora responsável',False),
+           ('Otaku Sign / Anime Channel','https://www.ketv.com.br/desenhos','Catálogo de terceiros; procurar emissora responsável',False),
+           ('3ABN Kids','https://3abnkids.tv/','Emissora oficial; infantil cristão; baixa prioridade',True),
+          ]
+          HEADERS={'User-Agent':'RAF-TV-FACIL-compatibility-test/3.0'}
+          PAT=re.compile(r'https://[^\s<>"\'\\]+?\.m3u8(?:\?[^\s<>"\'\\]*)?',re.I)
+          WATCH=['ThunderCats','Caverna do Dragão','He-Man','She-Ra','SilverHawks','Transformers','Tartarugas Ninja','Cavaleiros do Zodíaco','Dragon Ball Z','One Piece','Naruto','X-Men','Tom e Jerry','Os Flintstones','Papa-Léguas','Pantera Cor-de-Rosa','Pica-Pau','Scooby-Doo','Bob Esponja','Pokémon']
+
+          def allowed(u):
+              p=urlsplit(u)
+              if p.scheme!='https' or not p.hostname or p.username or p.password: return False
+              if any(s in p.hostname.lower() for s in ('pluto.tv','youtube.com','googlevideo.com','twitch.tv','ttvnw.net')): return False
+              if any(re.search(r'token|signature|auth|policy|expires|session|key-pair',k,re.I) for k in parse_qs(p.query)): return False
+              return True
+
+          def read(url,limit=900000):
+              with requests.get(url,headers=HEADERS,timeout=(5,10),stream=True) as r:
+                  r.raise_for_status()
+                  if not allowed(r.url): raise ValueError('redirecionamento não elegível')
+                  b=bytearray()
+                  for chunk in r.iter_content(16384):
+                      b.extend(chunk)
+                      if len(b)>=limit: break
+                  return r.url, bytes(b[:limit]).decode('utf-8','replace')
+
+          def inspect(item):
+              name,page,note,official=item
+              row={'canal':name,'pagina':page,'origem':note,'resultado':'','urls_publicas':[],'titulos_mencionados':[]}
+              try:
+                  base,body=read(page)
+                  soup=BeautifulSoup(body,'html.parser')
+                  plain=soup.get_text(' ',strip=True)
+                  row['titulos_mencionados']=[x for x in WATCH if x.casefold() in plain.casefold()]
+                  if not official:
+                      row['resultado']='ORIGEM/LICENÇA PENDENTE - somente pesquisa de catálogo; sem coleta de sinal'
+                      return row
+                  docs=[(base,body)]
+                  # Apenas scripts públicos de mesma origem; sem cookies, login ou cabeçalhos de terceiros.
+                  for tag in soup.select('script[src], iframe[src]')[:12]:
+                      u=urljoin(base,tag.get('src',''))
+                      if allowed(u) and urlsplit(u).hostname==urlsplit(base).hostname:
+                          try: docs.append(read(u,350000))
+                          except Exception: pass
+                  found=set()
+                  for origin,doc in docs:
+                      doc=html.unescape(doc.replace('\\/','/').replace('\\u0026','&'))
+                      found.update(u.rstrip(');,]') for u in PAT.findall(doc))
+                      for tag in BeautifulSoup(doc,'html.parser').select('video[src], source[src]'):
+                          u=urljoin(origin,tag['src'])
+                          if '.m3u8' in urlsplit(u).path.lower(): found.add(u)
+                  for u in sorted(found)[:8]:
+                      if not allowed(u): continue
+                      result={'url':u,'resultado':'PENDENTE','codecs':[]}
+                      try:
+                          final,m=read(u,200000)
+                          if not m.lstrip().startswith('#EXTM3U'): raise ValueError('não é manifesto HLS')
+                          if re.search(r'#EXT-X-(?:SESSION-)?KEY:.*METHOD=(?!NONE(?:,|$))',m): raise ValueError('manifesto protegido; não testado')
+                          if '#EXT-X-ENDLIST' in m: raise ValueError('playlist encerrada/sob demanda')
+                          # Confere também variantes antes de abrir o vídeo.
+                          variants=[]; pending=False
+                          for ln in m.splitlines():
+                              ln=ln.strip()
+                              if ln.startswith('#EXT-X-STREAM-INF:'): pending=True
+                              elif pending and ln and not ln.startswith('#'):
+                                  variants.append(urljoin(final,ln)); pending=False
+                          target=final
+                          if variants:
+                              target=variants[0]
+                              if not allowed(target): raise ValueError('variante restrita')
+                              target,sub=read(target,200000)
+                              if not sub.lstrip().startswith('#EXTM3U') or '#EXT-X-ENDLIST' in sub or re.search(r'#EXT-X-(?:SESSION-)?KEY:.*METHOD=(?!NONE(?:,|$))',sub): raise ValueError('variante protegida ou não contínua')
+                          p=subprocess.run(['ffprobe','-v','error','-rw_timeout','8000000','-analyzeduration','3000000','-probesize','3000000','-show_entries','stream=codec_type,codec_name','-of','json',target],capture_output=True,text=True,timeout=20)
+                          streams=json.loads(p.stdout or '{}').get('streams',[])
+                          result['codecs']=sorted({s.get('codec_name','') for s in streams if s.get('codec_name')})
+                          result['resultado']='CANDIDATO VIDEO HLS - autorização de integração pendente' if p.returncode==0 and any(s.get('codec_type')=='video' for s in streams) else 'HLS acessível; vídeo não confirmado'
+                      except Exception as e: result['resultado']=str(e)[:180]
+                      row['urls_publicas'].append(result)
+                  row['resultado']='Pesquisa concluída; revisar candidatos' if row['urls_publicas'] else 'SEM HLS DIRETO PÚBLICO IDENTIFICADO'
+              except Exception as e: row['resultado']='Falha na consulta: '+str(e)[:180]
+              return row
+
+          with concurrent.futures.ThreadPoolExecutor(max_workers=4) as ex: rows=list(ex.map(inspect,SOURCES))
+          (OUT/'relatorio-desenhos.json').write_text(json.dumps(rows,ensure_ascii=False,indent=2),encoding='utf-8')
+          with (OUT/'relatorio-desenhos.csv').open('w',encoding='utf-8-sig',newline='') as f:
+              w=csv.writer(f,delimiter=';'); w.writerow(['Canal','Página','Origem','URL pública','Resultado','Codecs','Títulos mencionados'])
+              for r in rows:
+                  for u in r['urls_publicas'] or [{'url':'','resultado':r['resultado'],'codecs':[]}]:
+                      w.writerow([r['canal'],r['pagina'],r['origem'],u['url'],u['resultado'],','.join(u['codecs']),', '.join(r['titulos_mencionados'])])
+                  print(r['canal']+' | '+r['resultado'])
+                  for u in r['urls_publicas']: print('  '+u['resultado']+' | '+','.join(u['codecs']))
+          (OUT/'LEIA-ME.txt').write_text('Pesquisa de desenhos clássicos e animes. Nenhuma lista foi alterada. Acesso técnico não comprova direitos, identidade ou reprodução no Brasil. Títulos mencionados não garantem grade atual. Sem Pluto TV, login ou contorno de proteção. Verificar autorização antes de integrar.\n',encoding='utf-8')
+          print('Total de páginas consultadas:',len(rows),'| Candidatos vídeo HLS:',sum(u['resultado'].startswith('CANDIDATO VIDEO') for r in rows for u in r['urls_publicas']))
+          PY
+      - name: Salvar relatorio
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: RAF-TV-FACIL-Relatorio-Desenhos-V3
+          path: resultado/
+          if-no-files-found: error
