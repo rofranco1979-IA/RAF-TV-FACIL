@@ -1,0 +1,64 @@
+name: RAF TV FACIL V1.6 - Gerar APK
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Preparar V1.6 sobre a V1.5 original
+        shell: bash
+        run: |
+          set -eu
+          python3 -m venv "$RUNNER_TEMP/raf-patch-venv"
+          "$RUNNER_TEMP/raf-patch-venv/bin/pip" -q install PyYAML==6.0.2
+          "$RUNNER_TEMP/raf-patch-venv/bin/python" - <<'PY'
+          import yaml, pathlib, os
+          source = pathlib.Path('.github/workflows/gerar-apk-raf-tv-facil-v1.5.yml')
+          steps = yaml.safe_load(source.read_text())['jobs']['build']['steps']
+          s = next(x['run'] for x in steps if x.get('name') == 'Criar projeto independente')
+          def replace(a,b):
+              global s
+              if s.count(a)!=1: raise RuntimeError('Base V1.5 divergente: '+a)
+              s=s.replace(a,b,1)
+          replace("versionCode 7; versionName '1.5'", "versionCode 8; versionName '1.6'")
+          replace('private int sourceIndex = 0;', 'private int sourceIndex = 0;\n    private String lastPlaybackError = "";')
+          replace('attempts=0; sourceIndex=0; handler.removeCallbacks(reconnect);','attempts=0; sourceIndex=0; lastPlaybackError=""; handler.removeCallbacks(reconnect);')
+          replace('onPlayerError(PlaybackException e) { scheduleRetry(); }','onPlayerError(PlaybackException e) { lastPlaybackError=e.getErrorCodeName(); scheduleRetry(); }')
+          replace('else if(s==Player.STATE_ENDED) scheduleRetry();','else if(s==Player.STATE_ENDED) { if(player!=null && !player.isCurrentMediaItemLive() && !isRadio()) showStatus("Vídeo encerrado. Selecione novamente para repetir."); else scheduleRetry(); }')
+          replace('if(formats[index].equals("hls")||url.toLowerCase(java.util.Locale.ROOT).contains(".m3u8"))item.setMimeType(MimeTypes.APPLICATION_M3U8);','''String path=Uri.parse(url).getPath();
+              String lower=path==null?"":path.toLowerCase(java.util.Locale.ROOT);
+              if(lower.endsWith(".m3u8"))item.setMimeType(MimeTypes.APPLICATION_M3U8);
+              else if(lower.endsWith(".mp4")||lower.endsWith(".webm")||formats[index].equals("mp4")||formats[index].equals("webm")) { /* Media3 detecta o arquivo. */ }
+              else if(formats[index].equals("hls"))item.setMimeType(MimeTypes.APPLICATION_M3U8);''')
+          replace('cat.startsWith("Rádios")?"audio":"hls").toLowerCase(java.util.Locale.ROOT);ff.add(fmt.equals("audio")||fmt.equals("auto")?fmt:"hls");','cat.startsWith("Rádios")?"audio":"auto").toLowerCase(java.util.Locale.ROOT);ff.add(java.util.Arrays.asList("audio","auto","hls","mp4","webm").contains(fmt)?fmt:"auto");')
+          replace(r'showStatus("Canal indisponível.\nUse as setas para trocar ou OK para escolher.");',r'showStatus("Canal indisponível.\n"+(lastPlaybackError.isEmpty()?"Tempo de conexão excedido":lastPlaybackError)+"\nUse as setas para trocar ou OK para escolher.");')
+          replace('"Rádios por ritmo", "Outros"};','"Rádios por ritmo", "Outros", "Clássicos e Nostalgia", "Desenhos clássicos"};')
+          replace('0xFF5C458B,0xFF39485A};','0xFF5C458B,0xFF39485A,0xFF795548,0xFF875409};')
+          s=s.replace('# RAF TV FÁCIL 1.5','# RAF TV FÁCIL 1.6').replace('player HLS e áudio direto Media3','player HLS, áudio direto e vídeo MP4/WebM Media3')
+          build=next(x['run'] for x in steps if x.get('name')=='Instalar SDK, compilar e assinar').replace('RAF-TV-FACIL-V1.5-Android-TV','RAF-TV-FACIL-V1.6-Android-TV')
+          tmp=pathlib.Path(os.environ['RUNNER_TEMP'])
+          (tmp/'raf16-create.sh').write_text(s)
+          (tmp/'raf16-build.sh').write_text(build)
+          PY
+          bash "$RUNNER_TEMP/raf16-create.sh"
+      - name: Instalar SDK, compilar e assinar V1.6
+        shell: bash
+        env:
+          RAF_SIGNING_JSON: ${{ secrets.RAF_TV_SIGNING }}
+        run: bash "$RUNNER_TEMP/raf16-build.sh"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: RAF-TV-FACIL-V1.6-Android-TV
+          path: dist/RAF-TV-FACIL-V1.6-Android-TV.apk
+          if-no-files-found: error
